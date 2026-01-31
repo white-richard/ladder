@@ -1,0 +1,82 @@
+[project]
+name = "ladder"
+version = "0.0.0"
+requires-python = "==3.8.19"
+dependencies = [
+  "torch",
+  "torchvision",
+  "torchaudio",
+  
+  "ftfy",
+  "regex",
+  "tqdm",
+  "clip @ git+https://github.com/openai/CLIP.git",
+  
+  "numpy",
+  "scipy",
+  "pandas",
+  "scikit-learn",
+  "scikit-image",
+  "statsmodels",
+
+  "opencv-python",
+  "pillow",
+  "imageio",
+  "tifffile",
+  "pywavelets",
+  "shapely",
+  "pydicom",
+
+  "albumentations",
+  "imgaug",
+
+  "transformers",
+  "tokenizers<0.14",
+  "datasets",
+  "huggingface-hub",
+  "timm",
+  "tqdm",
+  "regex",
+  "nltk",
+  "ftfy",
+
+  "gpytorch",
+  "pyro-ppl",
+  "netcal",
+
+  "hydra-core",
+  "omegaconf",
+
+  "matplotlib",
+  "seaborn",
+  "tikzplotlib",
+
+  "pyarrow",
+  "openpyxl",
+
+  "tensorboard",
+
+  "openai",
+  "anthropic",
+  "httpx",
+  "aiohttp",
+
+  "google-cloud-aiplatform",
+  "google-cloud-bigquery",
+  "google-cloud-storage",
+  "google-api-core",
+  "google-auth",
+  "google-auth-oauthlib",
+
+  "gdown",
+  "beautifulsoup4",
+  "diskcache",
+
+  "pycocotools",
+  "pycocoevalcap",
+
+  # Local LLM
+  "llama-cpp-python",
+]
+
+[tool.uv]

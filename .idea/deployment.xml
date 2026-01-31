@@ -5,28 +5,28 @@
       <paths name="shawn24@scc4.bu.edu:22 password (3)">
         <serverdata>
           <mappings>
-            <mapping deploy="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder" local="$PROJECT_DIR$" />
+            <mapping deploy="/Ladder" local="$PROJECT_DIR$" />
           </mappings>
         </serverdata>
       </paths>
       <paths name="shawn24@scc4.bu.edu:22 password (4)">
         <serverdata>
           <mappings>
-            <mapping deploy="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder" local="$PROJECT_DIR$" />
+            <mapping deploy="/Ladder" local="$PROJECT_DIR$" />
           </mappings>
         </serverdata>
       </paths>
       <paths name="shawn24@scc4.bu.edu:22 password (5)">
         <serverdata>
           <mappings>
-            <mapping deploy="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder" local="$PROJECT_DIR$" />
+            <mapping deploy="/Ladder" local="$PROJECT_DIR$" />
           </mappings>
         </serverdata>
       </paths>
       <paths name="shawn24@scc4.bu.edu:22 password (6)">
         <serverdata>
           <mappings>
-            <mapping deploy="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/" local="$PROJECT_DIR$" />
+            <mapping deploy="" local="$PROJECT_DIR$" />
           </mappings>
         </serverdata>
       </paths>

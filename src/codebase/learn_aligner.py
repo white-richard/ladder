@@ -301,16 +301,16 @@ def config():
     parser.add_argument("--dataset", default="NIH", type=str)
     parser.add_argument(
         "--save_path", metavar="DIR",
-        default="./Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{0}/aligner",
+        default=".out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{0}/aligner",
         help='save path of aligners')
     parser.add_argument(
         "--clf_reps_path",
-        default="./Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{0}/clip_img_encoder_RN50/{1}_classifier_embeddings.npy",
+        default=".out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{0}/clip_img_encoder_RN50/{1}_classifier_embeddings.npy",
         type=str, help="Save path of classifier representations"
     )
     parser.add_argument(
         "--clip_reps_path",
-        default="./Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{0}/clip_img_encoder_RN50/{1}_clip_embeddings.npy",
+        default=".out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{0}/clip_img_encoder_RN50/{1}_clip_embeddings.npy",
         type=str,
         help="Save path of clip (VLM) representations"
     )

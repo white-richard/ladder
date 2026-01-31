@@ -15,13 +15,13 @@ import pickle
 def config():
     parser = argparse.ArgumentParser()
     parser.add_argument('--tensorboard-path', metavar='DIR',
-                        default='/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/RSNA/log',
+                        default='out/RSNA/log',
                         help='path to tensorboard logs')
     parser.add_argument('--checkpoints', metavar='DIR',
-                        default='/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/RSNA/fold0',
+                        default='out/RSNA/fold0',
                         help='path to checkpoints')
     parser.add_argument('--output_path', metavar='DIR',
-                        default='/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/RSNA/fold0',
+                        default='out/RSNA/fold0',
                         help='path to output logs')
     parser.add_argument(
         "--data-dir",

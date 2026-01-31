@@ -1,5 +1,5 @@
 #!/bin/sh
-#SBATCH --output=/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/src/psc_logs/subpopbench/waterbirds_vit/LISA-%j.out
+#SBATCH --output=src/psc_logs/subpopbench/waterbirds_vit/LISA-%j.out
 
 pwd
 hostname
@@ -9,19 +9,19 @@ CURRENT=$(date +"%Y-%m-%d_%T")
 
 echo $CURRENT
 
-slurm_output_train1=/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/src/psc_logs/subpopbench/waterbirds_vit/LISA-$CURRENT.out
+slurm_output_train1=src/psc_logs/subpopbench/waterbirds_vit/LISA-$CURRENT.out
 
 echo "Save image reps"
 source /ocean/projects/asc170022p/shg121/anaconda3/etc/profile.d/conda.sh
 
 conda activate /restricted/projectnb/batmanlab/shawn24/breast_clip_rtx_6000
 
-python /restricted/projectnb/batmanlab/shawn24/PhD/Ladder/src/codebase/SubpopBench-main/subpopbench/train.py \
+python src/codebase/SubpopBench-main/subpopbench/train.py \
        --seed 0 \
        --algorithm "LISA" \
        --dataset "Waterbirds" \
        --train_attr yes \
-       --data_dir "/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/data" \
-       --output_dir "/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds" \
+       --data_dir "data" \
+       --output_dir "out/Waterbirds" \
        --output_folder_name "vit_sup_in1k" \
        --image_arch "vit_sup_in1k" >$slurm_output_train1

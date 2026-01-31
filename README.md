@@ -10,7 +10,7 @@
   <a href="https://huggingface.co/shawn24/Ladder">
     <img src="https://img.shields.io/badge/Hugging%20Face-yellow" alt="Hugging Face" />
   </a>
-  <a href="https://github.com/batmanlab/Ladder/blob/main/doc/Ladder-ACL-25-poster-v2.pdf">
+  <a href="https://github.com/batmanlabblob/main/doc/Ladder-ACL-25-poster-v2.pdf">
     <img src="https://img.shields.io/badge/Poster-orange" alt="Poster" />
   </a>
   <img src="https://visitor-badge.laobi.icu/badge?page_id=batmanlab.Ladder&right_color=%23FFA500" alt="Visitor badge" />
@@ -78,7 +78,7 @@
 ---
 ##  ⚠️ Warnings
 >
-> - 🔧 Replace all hardcoded paths like `/restricted/projectnb/batmanlab/shawn24/PhD` with your **own directory**.
+> - 🔧 Replace all hardcoded paths like `` with your **own directory**.
 >
 > - Following guidelines of [MIMIC-CXR] (https://physionet.org/news/post/gpt-responsible-use), we setup [google vertex ai](https://console.cloud.google.com/vertex-ai/studio/chat?project=gen-lang-client-0586677956) for setting GEMINI as LLM for hypothesis
 > generation for medical images in this codebase. 
@@ -115,7 +115,7 @@ under `src/codebase/SubpopBench-main`
 
 ## 🛠️ Environment Setup
 
-Use [environment.yaml](https://github.com/batmanlab/Ladder/blob/main/environment.yaml) 
+Use [environment.yaml](https://github.com/batmanlabblob/main/environment.yaml) 
 ```bash
 git clone git@github.com:batmanlab/Ladder.git
 cd Ladder
@@ -137,16 +137,16 @@ the [classifier_zoo.md](classifier_zoo.md).
 
 We provide the pretrained **ResNet-50 (`resnet_sup_in1k`)** and **EfficientNet-B5 (`tf_efficientnet_b5_ns-detect`)**
 classifier checkpoints used in our experiments
-via [Hugging Face Hub](https://huggingface.co/shawn24/Ladder/tree/main/out).
+via [Hugging Face Hub](https://huggingface.co/shawn24tree/main/out).
 
 #### 📦 Available Checkpoints by Dataset:
 
-- 🐦 [Waterbirds (ResNet-50)](https://huggingface.co/shawn24/Ladder/blob/main/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/model.pkl)
-- 👤 [CelebA (ResNet-50)](https://huggingface.co/shawn24/Ladder/blob/main/out/CelebA/resnet_sup_in1k_attrNo/CelebA_ERM_hparams0_seed0/model.pkl)
-- 🐶 [MetaShift (ResNet-50)](https://huggingface.co/shawn24/Ladder/tree/main/out/MetaShift/resnet_sup_in1k_attrNo/MetaShift_ERM_hparams0_seed0/model.pkl)
-- 🫁 [NIH ChestX-ray (ResNet-50)](https://huggingface.co/shawn24/Ladder/blob/main/out/NIH/resnet50/seed0/chk_pt-best-auc0.8674.pt)
-- 🧪 [RSNA-Mammo (EfficientNet-B5)](https://huggingface.co/shawn24/Ladder/blob/main/out/RSNA/fold0/b5-model-best-epoch-7.tar)
-- 🏥 [VinDr-Mammo (EfficientNet-B5)](https://huggingface.co/shawn24/Ladder/blob/main/out/ViNDr/fold0/efficientnetb5_seed_10_fold0_best_aucroc_ver084.pth)
+- 🐦 [Waterbirds (ResNet-50)](https://huggingface.co/shawn24blob/main/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/model.pkl)
+- 👤 [CelebA (ResNet-50)](https://huggingface.co/shawn24blob/main/out/CelebA/resnet_sup_in1k_attrNo/CelebA_ERM_hparams0_seed0/model.pkl)
+- 🐶 [MetaShift (ResNet-50)](https://huggingface.co/shawn24tree/main/out/MetaShift/resnet_sup_in1k_attrNo/MetaShift_ERM_hparams0_seed0/model.pkl)
+- 🫁 [NIH ChestX-ray (ResNet-50)](https://huggingface.co/shawn24blob/main/out/NIH/resnet50/seed0/chk_pt-best-auc0.8674.pt)
+- 🧪 [RSNA-Mammo (EfficientNet-B5)](https://huggingface.co/shawn24blob/main/out/RSNA/fold0/b5-model-best-epoch-7.tar)
+- 🏥 [VinDr-Mammo (EfficientNet-B5)](https://huggingface.co/shawn24blob/main/out/ViNDr/fold0/efficientnetb5_seed_10_fold0_best_aucroc_ver084.pth)
 
 ## 🤖 Vision-language representation space
 
@@ -163,7 +163,7 @@ Download the latest checkpoints from the respective repositories.
 ### 🌄 For Natural Images
 
 Ladder requires captions for the images in the validation dataset. We provide a script to generate captions for the images using
-BLIP and GPT-4o. You can get the captions directly from the respective dataset directory in [Hugging Face](https://huggingface.co/shawn24/Ladder/tree/main/Data/) or generate them using the following scripts.
+BLIP and GPT-4o. You can get the captions directly from the respective dataset directory in [Hugging Face](https://huggingface.co/shawn24tree/main/Data/) or generate them using the following scripts.
 
 ### Using BLIP
 
@@ -171,9 +171,9 @@ BLIP and GPT-4o. You can get the captions directly from the respective dataset d
 python ./src/codebase/caption_images.py \
   --seed=0 \
   --dataset="Waterbirds" \
-  --img-path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/data/waterbirds/waterbird_complete95_forest2water2" \
-  --csv="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/data/waterbirds/metadata_waterbirds.csv" \
-  --save_csv="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/data/waterbirds/va_metadata_waterbirds_captioning_blip.csv" \
+  --img-path="data/waterbirds/waterbird_complete95_forest2water2" \
+  --csv="data/waterbirds/metadata_waterbirds.csv" \
+  --save_csv="data/waterbirds/va_metadata_waterbirds_captioning_blip.csv" \
   --split="va" \
   --captioner="blip"
 ```
@@ -184,9 +184,9 @@ python ./src/codebase/caption_images.py \
 python ./src/codebase/caption_images_gpt_4.py \
   --seed=0 \
   --dataset="Waterbirds" \
-  --img-path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/data/waterbirds/waterbird_complete95_forest2water2" \
-  --csv="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/data/waterbirds/metadata_waterbirds.csv" \
-  --save_csv="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/data/waterbirds/va_metadata_waterbirds_captioning_GPT.csv" \
+  --img-path="data/waterbirds/waterbird_complete95_forest2water2" \
+  --csv="data/waterbirds/metadata_waterbirds.csv" \
+  --save_csv="data/waterbirds/va_metadata_waterbirds_captioning_GPT.csv" \
   --split="va" \
   --model="gpt-4o" \
   --api_key="<open-ai key>"
@@ -196,12 +196,12 @@ python ./src/codebase/caption_images_gpt_4.py \
 
 - For NIH-CXR, we use the radiology report from [MIMIC-CXR](https://physionet.org/content/mimic-cxr/2.1.0/) dataset.
   Download the metadata csv containing impression and
-  findings from [here](https://huggingface.co/shawn24/Ladder/blob/main/Data/NIH/mimic-cxr-chexpert.csv).
+  findings from [here](https://huggingface.co/shawn24blob/main/Data/NIH/mimic-cxr-chexpert.csv).
 - For RSNA-Mammo and VinDr-Mammo, we use the radiology text from [Mammo-FActOR](https://github.com/batmanlab/Mammo-CLIP/blob/main/src/codebase/breastclip/data/datasets/prompts.json) codebase.
 ## 🪜 LADDER Pipeline
 
 Ladder pipeline consists of 6 steps. We uploaded the outputs of every step in
-the [huggingface](https://huggingface.co/shawn24/Ladder/tree/main/out). The steps are as follows:
+the [huggingface](https://huggingface.co/shawn24tree/main/out). The steps are as follows:
 
 ### 🔁 Pipeline Overview
 
@@ -212,11 +212,11 @@ python ./src/codebase/save_img_reps.py \
   --seed=0 \
   --dataset="Waterbirds" \
   --classifier="resnet_sup_in1k" \
-  --classifier_check_pt="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/model.pkl" \
+  --classifier_check_pt="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/model.pkl" \
   --flattening-type="adaptive" \
   --clip_vision_encoder="ViT-B/32" \
-  --data_dir="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/data" \
-  --save_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}"
+  --data_dir="data" \
+  --save_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}"
 ```
 
 #### Step2: Save text representations text encoder from vision language representation space
@@ -226,10 +226,10 @@ python ./src/codebase/save_text_reps.py \
   --seed=0 \
   --dataset="Waterbirds" \
   --clip_vision_encoder="ViT-B/32" \
-  --save_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}" \
+  --save_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}" \
   --prompt_sent_type="captioning" \
   --captioning_type="gpt-4o" \
-  --prompt_csv="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/data/waterbirds/va_metadata_waterbirds_captioning_GPT.csv"
+  --prompt_csv="data/waterbirds/va_metadata_waterbirds_captioning_GPT.csv"
 ```
 
 #### Step3: Train aligner to align the classifier and vision language image representations
@@ -239,9 +239,9 @@ python ./src/codebase/learn_aligner.py \
   --seed=0 \
   --epochs=30 \
   --dataset="Waterbirds" \
-  --save_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{0}/clip_img_encoder_ViT-B/32" \
-  --clf_reps_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{0}/clip_img_encoder_ViT-B/32/{1}_classifier_embeddings.npy" \
-  --clip_reps_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{0}/clip_img_encoder_ViT-B/32/{1}_clip_embeddings.npy"
+  --save_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{0}/clip_img_encoder_ViT-B/32" \
+  --clf_reps_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{0}/clip_img_encoder_ViT-B/32/{1}_classifier_embeddings.npy" \
+  --clip_reps_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{0}/clip_img_encoder_ViT-B/32/{1}_clip_embeddings.npy"
 ```
 
 #### Step4: Retrieving sentences indicative of biases
@@ -251,12 +251,12 @@ python ./src/codebase/discover_error_slices.py \
   --seed=0 \
   --topKsent=200 \
   --dataset="Waterbirds" \
-  --save_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32" \
-  --clf_results_csv="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/test_additional_info.csv" \
-  --clf_image_emb_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/test_classifier_embeddings.npy" \
-  --language_emb_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/sent_emb_captions_gpt-4o.npy" \
-  --sent_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/sentences_captions_gpt-4o.pkl" \
-  --aligner_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/aligner_30.pth"
+  --save_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32" \
+  --clf_results_csv="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/test_additional_info.csv" \
+  --clf_image_emb_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/test_classifier_embeddings.npy" \
+  --language_emb_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/sent_emb_captions_gpt-4o.npy" \
+  --sent_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/sentences_captions_gpt-4o.pkl" \
+  --aligner_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/aligner_30.pth"
 ```
 
 #### Step5: Discovering error slices via LLM-driven hypothesis generation
@@ -269,11 +269,11 @@ python ./src/codebase/validate_error_slices_w_LLM.py \
   --class_label="landbirds" \
   --clip_vision_encoder="ViT-B/32" \
   --key="<open-ai key>" \
-  --top50-err-text="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/landbirds_error_top_200_sent_diff_emb.txt" \
-  --save_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32" \
-  --clf_results_csv="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/{}_additional_info.csv" \
-  --clf_image_emb_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/{}_classifier_embeddings.npy" \
-  --aligner_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/aligner_30.pth"
+  --top50-err-text="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/landbirds_error_top_200_sent_diff_emb.txt" \
+  --save_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32" \
+  --clf_results_csv="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/{}_additional_info.csv" \
+  --clf_image_emb_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/{}_classifier_embeddings.npy" \
+  --aligner_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/aligner_30.pth"
 ```
 
 #### Step6: Mitigate multi-bias w/o annotation
@@ -288,11 +288,11 @@ python ./src/codebase/mitigate_error_slices.py \
   --mode="last_layer_finetune" \
   --dataset="Waterbirds" \
   --classifier="resnet_sup_in1k" \
-  --slice_names="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/{}_prompt_dict.pkl" \
-  --classifier_check_pt="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/model.pkl" \
-  --save_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32" \
-  --clf_results_csv="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/{}_{}_dataframe_mitigation.csv" \
-  --clf_image_emb_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/{}_classifier_embeddings.npy"
+  --slice_names="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/{}_prompt_dict.pkl" \
+  --classifier_check_pt="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/model.pkl" \
+  --save_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32" \
+  --clf_results_csv="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/{}_{}_dataframe_mitigation.csv" \
+  --clf_image_emb_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/{}_classifier_embeddings.npy"
 
 ```
 
@@ -354,4 +354,4 @@ For any queries, contact [Shantanu Ghosh](https://shantanu-ai.github.io/) (email
 ## Contributing
 
 Did you try some other classifier on a new dataset and want to report the results? Feel free to send
-a [pull request](https://github.com/batmanlab/Ladder/pulls).
+a [pull request](https://github.com/batmanlabpulls).

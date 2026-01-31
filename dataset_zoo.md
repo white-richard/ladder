@@ -94,9 +94,9 @@ png images for VinDr from the above link, don't preprocess for the VinDr dataset
 
 ### Metadata Files (including the annotations and attributes)
 The metadata files to train the classifier are provided here:
-- [Waterbirds](https://github.com/batmanlab/Ladder/blob/main/data/waterbirds/metadata_waterbirds.csv)
-- [MetaShift](https://github.com/batmanlab/Ladder/blob/main/data/metashift/metadata_metashift.csv)
-- [CelebA](https://github.com/batmanlab/Ladder/blob/main/data/celeba/metadata_celeba.csv)
-- [NIH](https://github.com/batmanlab/Ladder/blob/main/data/nih/nih_processed_v2.csv)
-- [RSNA-Mammo](https://github.com/batmanlab/Ladder/blob/main/data/RSNA_Cancer_Detection/rsna_w_upmc_concepts_breast_clip.csv)
-- [VinDr-Mammo](https://github.com/batmanlab/Ladder/blob/main/data/Vindr/vindr-mammo-a-large-scale-benchmark-dataset-for-computer-aided-detection-and-diagnosis-in-full-field-digital-mammography-1.0.0/vindr_detection_v1_folds_abnormal.csv)
+- [Waterbirds](https://github.com/batmanlabblob/main/data/waterbirds/metadata_waterbirds.csv)
+- [MetaShift](https://github.com/batmanlabblob/main/data/metashift/metadata_metashift.csv)
+- [CelebA](https://github.com/batmanlabblob/main/data/celeba/metadata_celeba.csv)
+- [NIH](https://github.com/batmanlabblob/main/data/nih/nih_processed_v2.csv)
+- [RSNA-Mammo](https://github.com/batmanlabblob/main/data/RSNA_Cancer_Detection/rsna_w_upmc_concepts_breast_clip.csv)
+- [VinDr-Mammo](https://github.com/batmanlabblob/main/data/Vindr/vindr-mammo-a-large-scale-benchmark-dataset-for-computer-aided-detection-and-diagnosis-in-full-field-digital-mammography-1.0.0/vindr_detection_v1_folds_abnormal.csv)
