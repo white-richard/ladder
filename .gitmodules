@@ -1,0 +1,3 @@
+[submodule "repos/ladder"]
+	path = repos/ladder
+	url = git@github.com:white-richard/ladder.git
