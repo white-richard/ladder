@@ -96,6 +96,13 @@ def config():
         action="store_true",
         help="Break after the first batch for quick debugging.",
     )
+    parser.add_argument(
+        "--vindr_label_mode",
+        default="abnormal",
+        type=str,
+        choices=["abnormal", "cancer_birads"],
+        help="Vindr label: 'abnormal' or 'cancer_birads' (breast_birads > 4).",
+    )
     return parser.parse_args()
 
 
@@ -122,7 +129,7 @@ def save_additional_info_to_csv(additional_info, save_path, mode):
     print(f"Saved additional info to {csv_file_path}")
 
 
-def compute_performance_metrics(dataset, additional_info, save_path, mode):
+def compute_performance_metrics(dataset, additional_info, save_path, mode, debug=False):
     """
     Computes evaluation metrics for a dataset-specific format.
 
@@ -131,6 +138,7 @@ def compute_performance_metrics(dataset, additional_info, save_path, mode):
         additional_info (dict): Predictions and metadata.
         save_path (Path): Directory to save results.
         mode (str): Data split (e.g., 'test', 'valid').
+        debug (bool): If True, break after processing the first few batches (for quick debug).
     """
     if dataset.lower() == "waterbirds":
         targets = additional_info["out_put_GT"].numpy()
@@ -178,13 +186,24 @@ def compute_performance_metrics(dataset, additional_info, save_path, mode):
         np_gt = oof_df_agg["out_put_GT"].values
         np_preds = oof_df_agg["out_put_predict"].values
 
-        aucroc = auroc(np_gt, np_preds)
+        if np.unique(np_gt).size < 2:
+            if debug:
+                print("Debug: grouped labels have one class; falling back to ungrouped metrics.")
+                np_gt = df["out_put_GT"].values
+                np_preds = df["out_put_predict"].values
+            else:
+                print("Warning: Only one class present in y_true; AUROC is undefined for this split.")
+
+        aucroc = auroc(np_gt, np_preds) if np.unique(np_gt).size >= 2 else np.nan
 
         mask = np_gt == 1
-        np_gt_cancer = np_gt[mask]
-        np_preds_cancer = np_preds[mask]
-        np_preds_cancer = (np_preds_cancer >= 0.5).astype(int)
-        acc_cancer = compute_accuracy_np_array(np_gt_cancer, np_preds_cancer)
+        if mask.sum() == 0:
+            acc_cancer = np.nan
+        else:
+            np_gt_cancer = np_gt[mask]
+            np_preds_cancer = np_preds[mask]
+            np_preds_cancer = (np_preds_cancer >= 0.5).astype(int)
+            acc_cancer = compute_accuracy_np_array(np_gt_cancer, np_preds_cancer)
 
         print(f"aucroc: {aucroc} acc_cancer: {acc_cancer}")
 
@@ -512,7 +531,7 @@ def save_reps(loader, device, mode, clf, clip_model, save_path, classifier_type,
             clf, loader, split=mode, device=device, bg_ratio=0.95, co_occur_obj_ratio=0.95
         )
     else:
-        compute_performance_metrics(dataset, additional_info, save_path, mode=mode)
+        compute_performance_metrics(dataset, additional_info, save_path, mode=mode, debug=debug)
 
     with open(save_path / f"{mode}_additional_info.pkl", "wb") as f:
         pickle.dump(additional_info, f)
