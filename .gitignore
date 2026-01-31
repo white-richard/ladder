@@ -1,4 +1,5 @@
 *.pyc
+data/
 *.lock
 *.safetensors
 *.zip
@@ -12,7 +13,7 @@
 *.png
 data/waterbirds/waterbird_complete95_forest2water2
 data/Vindr/vindr-mammo-a-large-scale-benchmark-dataset-for-computer-aided-detection-and-diagnosis-in-full-field-digital-mammography-1.0.0
-
+out/
 checkpoints/
 logs/
 tmp/
