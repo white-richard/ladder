@@ -29,7 +29,7 @@ def config():
         help="Dataset to process (e.g., NIH, RSNA, Waterbirds, CelebA, MetaShift).")
     parser.add_argument(
         "--save_path", metavar="DIR",
-        default=".out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}",
+        default="./Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}",
         help="Directory to save embeddings and processed outputs (supports {seed} formatting)."
     )
 

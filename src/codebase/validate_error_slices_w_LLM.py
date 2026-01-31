@@ -50,29 +50,29 @@ def config():
                         help="Column name in CSV with model predictions to evaluate.")
     parser.add_argument(
         "--top50-err-text",
-        default=".out/NIH_Cxrclip/resnet50/seed0/clip_img_encoder_swin-tiny-cxr-clip/pneumothorax_error_top_50_sent_diff_emb.txt",
+        default="./Ladder/out/NIH_Cxrclip/resnet50/seed0/clip_img_encoder_swin-tiny-cxr-clip/pneumothorax_error_top_50_sent_diff_emb.txt",
         type=str,
         help="Path to the file containing top-K error slice sentences."
     )
     parser.add_argument(
         "--save_path", metavar="DIR",
-        default=".out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/clip_img_encoder_ViT-B/32",
+        default="./Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/clip_img_encoder_ViT-B/32",
         help="Directory to save error slice outputs and logs (supports {seed} formatting)."
     )
     parser.add_argument(
         "--clf_results_csv", metavar="DIR",
-        default=".out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/clip_img_encoder_ViT-B/32/test_additional_info.csv",
+        default="./Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/clip_img_encoder_ViT-B/32/test_additional_info.csv",
         help="Path to classifier outputs with ground truth and predictions."
     )
     parser.add_argument(
         "--clf_image_emb_path", metavar="DIR",
-        default=".out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/clip_img_encoder_ViT-B/32/test_classifier_embeddings.npy",
+        default="./Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/clip_img_encoder_ViT-B/32/test_classifier_embeddings.npy",
         help="Path to NumPy file containing classifier image embeddings."
     )
 
     parser.add_argument(
         "--aligner_path", metavar="DIR",
-        default=".out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/aligner/aligner_50.pth",
+        default="./Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/aligner/aligner_50.pth",
         help="Path to trained linear aligner (classifier to CLIP space projection)."
     )
     parser.add_argument(

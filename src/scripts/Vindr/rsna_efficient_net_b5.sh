@@ -24,7 +24,8 @@ python ./src/codebase/save_img_reps.py \
   --data_dir="data/Vindr/vindr-mammo-a-large-scale-benchmark-dataset-for-computer-aided-detection-and-diagnosis-in-full-field-digital-mammography-1.0.0" \
   --save_path="out/ViNDr/fold{}" \
   --tokenizers "/home/richw/.cache/huggingface/tokenizers" \
-  --cache_dir "/home/richw/.cache/huggingface"
+  --cache_dir "/home/richw/.cache/huggingface" \
+  --debug
 
 python ./src/codebase/save_img_reps.py \
   --seed=0 \
@@ -37,7 +38,8 @@ python ./src/codebase/save_img_reps.py \
   --data_dir="data/Vindr/vindr-mammo-a-large-scale-benchmark-dataset-for-computer-aided-detection-and-diagnosis-in-full-field-digital-mammography-1.0.0" \
   --save_path="out/ViNDr/rsna_fold{}" \
   --tokenizers "/home/richw/.cache/huggingface/tokenizers" \
-  --cache_dir "/home/richw/.cache/huggingface"
+  --cache_dir "/home/richw/.cache/huggingface" \
+  --debug
 
 
 # # Step 3: Save Text Reps EN B5 valid

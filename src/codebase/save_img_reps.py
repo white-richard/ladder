@@ -91,6 +91,11 @@ def config():
         type=str,
         help="Cache directory required by CXR-CLIP or Mammo-CLIP.",
     )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Break after the first batch for quick debugging.",
+    )
     return parser.parse_args()
 
 
@@ -457,7 +462,7 @@ def process_batch(batch, device, clf, clip_model, classifier_type, dataset):
         return reps_classifier, reps_clip, batch_info
 
 
-def save_reps(loader, device, mode, clf, clip_model, save_path, classifier_type, dataset="breast"):
+def save_reps(loader, device, mode, clf, clip_model, save_path, classifier_type, dataset="breast", debug=False):
     """
     Saves feature embeddings and associated metadata for a data split.
 
@@ -470,6 +475,7 @@ def save_reps(loader, device, mode, clf, clip_model, save_path, classifier_type,
         save_path (Path): Path to save outputs.
         classifier_type (str): Classifier name string.
         dataset (str): Dataset name.
+        debug (bool): If True, break after processing the first few batches (for quick debug).
     """
 
     all_reps_classifier = []
@@ -488,6 +494,9 @@ def save_reps(loader, device, mode, clf, clip_model, save_path, classifier_type,
 
             t.set_postfix(batch_id=f"{batch_id}")
             t.update()
+            if debug and batch_id >= 5:
+                print("Debug mode: stopping after first few batches.")
+                break
 
     all_reps_classifier = np.stack(all_reps_classifier)
     all_reps_clip = np.stack(all_reps_clip)
@@ -536,6 +545,7 @@ def main(args):
             args.save_path,
             args.classifier,
             args.dataset,
+            args.debug,
         )
     if "test_loader" in data_loaders:
         save_reps(
@@ -547,6 +557,7 @@ def main(args):
             args.save_path,
             args.classifier,
             args.dataset,
+            args.debug,
         )
     if "valid_loader" in data_loaders:
         save_reps(
@@ -558,6 +569,7 @@ def main(args):
             args.save_path,
             args.classifier,
             args.dataset,
+            args.debug,
         )
 
 

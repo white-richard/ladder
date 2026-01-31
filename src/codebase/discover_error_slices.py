@@ -397,32 +397,32 @@ def config():
         "--dataset", default="Waterbirds", type=str, help="Name of the dataset to evaluate.")
     parser.add_argument(
         "--save_path", metavar="DIR",
-        default=".out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/clip_img_encoder_ViT-B/32",
+        default="./Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/clip_img_encoder_ViT-B/32",
         help="Path to save outputs including explanation sentences."
     )
     parser.add_argument(
         "--clf_results_csv", metavar="DIR",
-        default=".out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/clip_img_encoder_ViT-B/32/test_additional_info.csv",
+        default="./Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/clip_img_encoder_ViT-B/32/test_additional_info.csv",
         help="CSV file containing predictions and labels."
     )
     parser.add_argument(
         "--clf_image_emb_path", metavar="DIR",
-        default=".out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/clip_img_encoder_ViT-B/32/test_classifier_embeddings.npy",
+        default="./Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/clip_img_encoder_ViT-B/32/test_classifier_embeddings.npy",
         help="Classifier-generated image embeddings (.npy)."
     )
     parser.add_argument(
         "--language_emb_path", metavar="DIR",
-        default=".out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/clip_img_encoder_ViT-B/32/sent_emb_word.npy",
+        default="./Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/clip_img_encoder_ViT-B/32/sent_emb_word.npy",
         help="Language embedding file (.npy) for sentences."
     )
     parser.add_argument(
         "--sent_path", metavar="DIR",
-        default=".out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/clip_img_encoder_ViT-B/32/sentences.pkl",
+        default="./Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/clip_img_encoder_ViT-B/32/sentences.pkl",
         help="Pickle file containing a list of text sentences."
     )
     parser.add_argument(
         "--aligner_path", metavar="DIR",
-        default=".out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/aligner/aligner_50.pth",
+        default="./Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/aligner/aligner_50.pth",
         help="Path to pretrained projection aligner (image → text embedding space)."
     )
     parser.add_argument(

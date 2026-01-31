@@ -495,22 +495,22 @@ def config():
 
     parser.add_argument(
         "--classifier_check_pt", metavar="DIR",
-        default=".out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/model.pkl",
+        default="./Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/model.pkl",
         help="Path template to load the classifier checkpoint file."
     )
     parser.add_argument(
         "--save_path", metavar="DIR",
-        default=".out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/clip_img_encoder_ViT-B/32",
+        default="./Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/clip_img_encoder_ViT-B/32",
         help="Directory to save trained models, predictions, and final results."
     )
     parser.add_argument(
         "--clf_results_csv", metavar="DIR",
-        default=".out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/clip_img_encoder_ViT-B/32/test_dataframe_mitigation.csv",
+        default="./Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/clip_img_encoder_ViT-B/32/test_dataframe_mitigation.csv",
         help="Path to CSV containing classifier predictions and ground truth."
     )
     parser.add_argument(
         "--clf_image_emb_path", metavar="DIR",
-        default=".out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/clip_img_encoder_ViT-B/32/test_classifier_embeddings.npy",
+        default="./Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/clip_img_encoder_ViT-B/32/test_classifier_embeddings.npy",
         help="Path to classifier-generated image embeddings (.npy), with format placeholders for seed and split."
     )
     parser.add_argument(
