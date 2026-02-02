@@ -1,5 +1,6 @@
 import clip
 import torch
+import os
 
 from breastclip.data.data_utils import load_tokenizer
 from breastclip.model import BreastClip
@@ -88,14 +89,20 @@ def create_clip(args):
         args.clip_check_pt = args.clip_check_pt.format(args.seed)
         ckpt = torch.load(args.clip_check_pt, map_location="cpu")
         cfg = ckpt["config"]
-        cfg["tokenizer"]["cache_dir"] = args.tokenizers
-        cfg["model"]["text_encoder"]["cache_dir"] = args.cache_dir
+        # Use provided cache dirs or fallback to safe local defaults
+        if args.tokenizers:
+            cfg["tokenizer"]["cache_dir"] = args.tokenizers
+        else:
+            cfg["tokenizer"]["cache_dir"] = os.path.join(os.getcwd(), "src", "codebase", "outputs", "huggingface", "tokenizers")
+        if args.cache_dir:
+            cfg["model"]["text_encoder"]["cache_dir"] = args.cache_dir
+        else:
+            cfg["model"]["text_encoder"]["cache_dir"] = os.path.join(os.getcwd(), "src", "codebase", "outputs", "huggingface", "models")
         model_config = cfg["model"]
         loss_config = cfg["loss"]
         tokenizer_config = cfg["tokenizer"]
-        tokenizer_config["cache_dir"] = args.tokenizers
         tokenizer = load_tokenizer(**tokenizer_config)
-        model_config["text_encoder"]["cache_dir"] = args.cache_dir
+        model_config["text_encoder"]["cache_dir"] = cfg["model"]["text_encoder"]["cache_dir"]
         model = CXRClip(model_config, loss_config, tokenizer)
         model = model.to(args.device)
         ret = model.load_state_dict(ckpt["model"], strict=False)
@@ -111,10 +118,17 @@ def create_clip(args):
         ckpt = torch.load(args.clip_check_pt, map_location="cpu")
         cfg = ckpt["config"]
         tokenizer_config = cfg["tokenizer"]
-        tokenizer_config["cache_dir"] = tokenizer_config["cache_dir"].replace(
-            "/ocean/projects/asc170022p/shg121/PhD", args.tokenizers)
-        cfg["model"]["text_encoder"]["cache_dir"] = cfg["model"]["text_encoder"]["cache_dir"].replace(
-            "/ocean/projects/asc170022p/shg121/PhD", args.cache_dir)
+        # Replace configured prefix with provided paths, or use safe local defaults if none provided
+        if args.tokenizers:
+            tokenizer_config["cache_dir"] = tokenizer_config["cache_dir"].replace(
+                "/ocean/projects/asc170022p/shg121/PhD", args.tokenizers)
+        else:
+            tokenizer_config["cache_dir"] = os.path.join(os.getcwd(), "src", "codebase", "outputs", "huggingface", "tokenizers")
+        if args.cache_dir:
+            cfg["model"]["text_encoder"]["cache_dir"] = cfg["model"]["text_encoder"]["cache_dir"].replace(
+                "/ocean/projects/asc170022p/shg121/PhD", args.cache_dir)
+        else:
+            cfg["model"]["text_encoder"]["cache_dir"] = os.path.join(os.getcwd(), "src", "codebase", "outputs", "huggingface", "models")
         print(tokenizer_config)
 
         tokenizer = load_tokenizer(**tokenizer_config) if tokenizer_config is not None else None

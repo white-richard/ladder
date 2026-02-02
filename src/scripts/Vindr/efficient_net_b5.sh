@@ -59,7 +59,7 @@ python ./src/codebase/validate_error_slices_w_LLM.py \
   --dataset="ViNDr" \
   --class_label="abnormal" \
   --clip_vision_encoder="tf_efficientnet_b5_ns-detect" \
-  --key="sk-proj-QZNJ5JnRi76V4FTYzVRxT3BlbkFJajHNswRDrX19Z8GgD1el" \
+  --key="" \
   --clip_check_pt="out/RSNA/fold0/b5-model-best-epoch-7.tar" \
   --top50-err-text="out/ViNDr/fold{}/clip_img_encoder_tf_efficientnet_b5_ns-detect/abnormal_error_top_100_sent_diff_emb.txt" \
   --save_path="out/ViNDr/fold{}/clip_img_encoder_tf_efficientnet_b5_ns-detect" \

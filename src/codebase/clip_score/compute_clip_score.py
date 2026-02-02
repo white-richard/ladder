@@ -49,24 +49,24 @@ def get_sentences_for_err_slices(
 
 
 def compute_nih_clip_score():
-    clip_check_pt = "/restricted/projectnb/batmanlab/shawn24/PhD/Multimodal-mistakes-debug/out/NIH_Cxrclip/resnet50/seed0/swint_mc.tar"
+    clip_check_pt = "Multimodal-mistakes-debug/out/NIH_Cxrclip/resnet50/seed0/swint_mc.tar"
     ckpt = torch.load(clip_check_pt, map_location="cpu")
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     cfg = ckpt["config"]
     cfg["tokenizer"][
-        "cache_dir"] = "/restricted/projectnb/batmanlab/shawn24/PhD/Multimodal-mistakes-debug/src/codebase/tokenizers/scc/huggingface/tokenizers"
+        "cache_dir"] = "Multimodal-mistakes-debug/src/codebase/tokenizers/scc/huggingface/tokenizers"
     cfg["model"]["text_encoder"][
-        "cache_dir"] = "/restricted/projectnb/batmanlab/shawn24/PhD/Multimodal-mistakes-debug/src/codebase/tokenizers/scc/huggingface/"
+        "cache_dir"] = "Multimodal-mistakes-debug/src/codebase/tokenizers/scc/huggingface/"
     print(cfg)
     model_config = cfg["model"]
     loss_config = cfg["loss"]
     tokenizer_config = cfg["tokenizer"]
     tokenizer_config[
-        "cache_dir"] = "/restricted/projectnb/batmanlab/shawn24/PhD/Multimodal-mistakes-debug/src/codebase/tokenizers/scc/huggingface/tokenizers"
+        "cache_dir"] = "Multimodal-mistakes-debug/src/codebase/tokenizers/scc/huggingface/tokenizers"
     tokenizer = load_tokenizer(**tokenizer_config)
     model_config["text_encoder"][
-        "cache_dir"] = "/restricted/projectnb/batmanlab/shawn24/PhD/Multimodal-mistakes-debug/src/codebase/tokenizers/scc/huggingface"
+        "cache_dir"] = "Multimodal-mistakes-debug/src/codebase/tokenizers/scc/huggingface"
     clip_model = CXRClip(model_config, loss_config, tokenizer)
     clip_model = clip_model.to(device)
     ret = clip_model.load_state_dict(ckpt["model"], strict=False)
@@ -74,9 +74,9 @@ def compute_nih_clip_score():
     print("CLIP is loaded successfully")
     clip_model.eval()
 
-    clf_image_emb_path = "/restricted/projectnb/batmanlab/shawn24/PhD/Multimodal-mistakes-debug/out/NIH_Cxrclip/resnet50/seed0/clip_img_encoder_swin-tiny-cxr-clip/test_classifier_embeddings.npy"
-    aligner_path = "/restricted/projectnb/batmanlab/shawn24/PhD/Multimodal-mistakes-debug/out/NIH_Cxrclip/resnet50/seed0/clip_img_encoder_swin-tiny-cxr-clip/aligner_200.pth"
-    clf_results_csv = "/restricted/projectnb/batmanlab/shawn24/PhD/Multimodal-mistakes-debug/out/NIH_Cxrclip/resnet50/seed0/clip_img_encoder_swin-tiny-cxr-clip/test_additional_info.csv"
+    clf_image_emb_path = "Multimodal-mistakes-debug/out/NIH_Cxrclip/resnet50/seed0/clip_img_encoder_swin-tiny-cxr-clip/test_classifier_embeddings.npy"
+    aligner_path = "Multimodal-mistakes-debug/out/NIH_Cxrclip/resnet50/seed0/clip_img_encoder_swin-tiny-cxr-clip/aligner_200.pth"
+    clf_results_csv = "Multimodal-mistakes-debug/out/NIH_Cxrclip/resnet50/seed0/clip_img_encoder_swin-tiny-cxr-clip/test_additional_info.csv"
     result = {}
     # change the keywords here based on the extracted hypotheses
     data = ['loculated pneumothorax', 'chest tubes', 'fluid levels', 'size and extent of pneumothorax',
@@ -100,15 +100,15 @@ def compute_nih_clip_score():
 
 
 def compute_rsna_clip_score():
-    clip_check_pt = "/restricted/projectnb/batmanlab/shawn24/PhD/Breast-CLIP/src/codebase/outputs/upmc_clip/b5_detector_period_n/checkpoints/fold_0/b5-model-best-epoch-7.tar"
+    clip_check_pt = "Breast-CLIP/src/codebase/outputs/upmc_clip/b5_detector_period_n/checkpoints/fold_0/b5-model-best-epoch-7.tar"
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     ckpt = torch.load(clip_check_pt, map_location="cpu")
     cfg = ckpt["config"]
     cfg["tokenizer"][
-        "cache_dir"] = "/restricted/projectnb/batmanlab/shawn24/PhD/Multimodal-mistakes-debug/src/codebase/tokenizers/scc/huggingface/tokenizers"
+        "cache_dir"] = "Multimodal-mistakes-debug/src/codebase/tokenizers/scc/huggingface/tokenizers"
     cfg["model"]["text_encoder"][
-        "cache_dir"] = "/restricted/projectnb/batmanlab/shawn24/PhD/Multimodal-mistakes-debug/src/codebase/tokenizers/scc/huggingface/"
+        "cache_dir"] = "Multimodal-mistakes-debug/src/codebase/tokenizers/scc/huggingface/"
     tokenizer_config = cfg["tokenizer"]
     tokenizer = load_tokenizer(**tokenizer_config) if tokenizer_config is not None else None
     clip_model = BreastClip(cfg["model"], cfg["loss"], tokenizer)
@@ -118,9 +118,9 @@ def compute_rsna_clip_score():
     print("CLIP is loaded successfully")
     clip_model.eval()
 
-    clf_image_emb_path = "/restricted/projectnb/batmanlab/shawn24/PhD/Multimodal-mistakes-debug/out/RSNA/Neurips/fold0/clip_img_encoder_tf_efficientnet_b5_ns-detect/valid_classifier_embeddings.npy"
-    aligner_path = "/restricted/projectnb/batmanlab/shawn24/PhD/Multimodal-mistakes-debug/out/RSNA/Neurips/fold0/clip_img_encoder_tf_efficientnet_b5_ns-detect/aligner_30.pth"
-    clf_results_csv = "/restricted/projectnb/batmanlab/shawn24/PhD/Multimodal-mistakes-debug/out/RSNA/Neurips/fold0/clip_img_encoder_tf_efficientnet_b5_ns-detect/valid_additional_info.csv"
+    clf_image_emb_path = "Multimodal-mistakes-debug/out/RSNA/Neurips/fold0/clip_img_encoder_tf_efficientnet_b5_ns-detect/valid_classifier_embeddings.npy"
+    aligner_path = "Multimodal-mistakes-debug/out/RSNA/Neurips/fold0/clip_img_encoder_tf_efficientnet_b5_ns-detect/aligner_30.pth"
+    clf_results_csv = "Multimodal-mistakes-debug/out/RSNA/Neurips/fold0/clip_img_encoder_tf_efficientnet_b5_ns-detect/valid_additional_info.csv"
     result = {}
     # change the keywords here based on the extracted hypotheses
     data = ['Scattered calcifications', 'Bilateral occurrences',
@@ -144,15 +144,15 @@ def compute_rsna_clip_score():
 
 
 def compute_vindr_clip_score():
-    clip_check_pt = "/restricted/projectnb/batmanlab/shawn24/PhD/Breast-CLIP/src/codebase/outputs/upmc_clip/b5_detector_period_n/checkpoints/fold_0/b5-model-best-epoch-7.tar"
+    clip_check_pt = "Breast-CLIP/src/codebase/outputs/upmc_clip/b5_detector_period_n/checkpoints/fold_0/b5-model-best-epoch-7.tar"
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     ckpt = torch.load(clip_check_pt, map_location="cpu")
     cfg = ckpt["config"]
     cfg["tokenizer"][
-        "cache_dir"] = "/restricted/projectnb/batmanlab/shawn24/PhD/Multimodal-mistakes-debug/src/codebase/tokenizers/scc/huggingface/tokenizers"
+        "cache_dir"] = "Multimodal-mistakes-debug/src/codebase/tokenizers/scc/huggingface/tokenizers"
     cfg["model"]["text_encoder"][
-        "cache_dir"] = "/restricted/projectnb/batmanlab/shawn24/PhD/Multimodal-mistakes-debug/src/codebase/tokenizers/scc/huggingface/"
+        "cache_dir"] = "Multimodal-mistakes-debug/src/codebase/tokenizers/scc/huggingface/"
     tokenizer_config = cfg["tokenizer"]
     tokenizer = load_tokenizer(**tokenizer_config) if tokenizer_config is not None else None
     clip_model = BreastClip(cfg["model"], cfg["loss"], tokenizer)
@@ -162,9 +162,9 @@ def compute_vindr_clip_score():
     print("CLIP is loaded successfully")
     clip_model.eval()
 
-    clf_image_emb_path = "/restricted/projectnb/batmanlab/shawn24/PhD/Multimodal-mistakes-debug/out/ViNDr/Neurips/fold0/cancer/e2/clip_img_encoder_tf_efficientnet_b5_ns-detect/valid_classifier_embeddings.npy"
-    aligner_path = "/restricted/projectnb/batmanlab/shawn24/PhD/Multimodal-mistakes-debug/out/ViNDr/Neurips/fold0/cancer/e2/clip_img_encoder_tf_efficientnet_b5_ns-detect/aligner_30.pth"
-    clf_results_csv = "/restricted/projectnb/batmanlab/shawn24/PhD/Multimodal-mistakes-debug/out/ViNDr/Neurips/fold0/cancer/e2/clip_img_encoder_tf_efficientnet_b5_ns-detect/valid_additional_info.csv"
+    clf_image_emb_path = "Multimodal-mistakes-debug/out/ViNDr/Neurips/fold0/cancer/e2/clip_img_encoder_tf_efficientnet_b5_ns-detect/valid_classifier_embeddings.npy"
+    aligner_path = "Multimodal-mistakes-debug/out/ViNDr/Neurips/fold0/cancer/e2/clip_img_encoder_tf_efficientnet_b5_ns-detect/aligner_30.pth"
+    clf_results_csv = "Multimodal-mistakes-debug/out/ViNDr/Neurips/fold0/cancer/e2/clip_img_encoder_tf_efficientnet_b5_ns-detect/valid_additional_info.csv"
     result = {}
 
     # change the keywords here based on the extracted hypotheses

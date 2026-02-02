@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the directory containing the .sh files
-DIR="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/src/codebase/SubpopBench-main/subpopbench/nih_scripts_JTT"
+DIR="Ladder/src/codebase/SubpopBench-main/subpopbench/nih_scripts_JTT"
 
 # Change to the directory
 cd "$DIR"

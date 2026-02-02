@@ -1,6 +1,6 @@
 python download.py \
 --datasets "waterbirds" "metashift" \
---data_path "/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/data" \
+--data_path "Ladder/data" \
 --download True
 
 

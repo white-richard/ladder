@@ -15,17 +15,17 @@ import pickle
 def config():
     parser = argparse.ArgumentParser()
     parser.add_argument('--tensorboard-path', metavar='DIR',
-                        default='/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/log/NIH/seed{}',
+                        default='Ladder/log/NIH/seed{}',
                         help='path to tensorboard logs')
     parser.add_argument('--checkpoints', metavar='DIR',
-                        default='/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/NIH/resnet50/seed{}',
+                        default='Ladder/out/NIH/resnet50/seed{}',
                         help='path to checkpoints')
     parser.add_argument('--output_path', metavar='DIR',
-                        default='/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/NIH/resnet50/seed{}',
+                        default='Ladder/out/NIH/resnet50/seed{}',
                         help='path to output logs')
     parser.add_argument(
         "--data-file",
-        default="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/data/nih/nih_processed_v2.csv",
+        default="Ladder/data/nih/nih_processed_v2.csv",
         type=str, help="Path to nih data file"
     )
     parser.add_argument(
