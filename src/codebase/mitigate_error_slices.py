@@ -115,6 +115,68 @@ def last_layer_retrain(
         return binary_predictions, np.concatenate(proba_list)
 
 
+def resolve_model_path(save_path, hyp_name):
+    """Return Path to model file. Try exact filename first, then glob for prefixes.
+
+    Accepts save_path (Path or str) and hyp_name (string, e.g. 'all_slices_y_ensemble_yes_H1' or 'H1').
+    """
+    p = Path(save_path)
+    # If hyp_name already includes full prefix/suffix
+    candidate = p / f"{hyp_name}.pth"
+    if candidate.exists():
+        return candidate
+    # Try with prefix
+    if not hyp_name.startswith('all_slices_y_ensemble_yes_'):
+        prefix = f"all_slices_y_ensemble_yes_{hyp_name}"
+    else:
+        prefix = hyp_name
+    matches = list(p.glob(f"{prefix}*.pth"))
+    if matches:
+        return matches[0]
+    return None
+
+
+def load_and_eval(model_path, model, test_data_loader, device, loss_type="BCE"):
+    """
+    Load model weights from `model_path` (expects either a state dict or a dict with key 'model')
+    and evaluate on `test_data_loader`.
+
+    Returns:
+        (binary_predictions, probabilities)
+    """
+    model.to(device)
+    ckpt = torch.load(model_path, map_location=device)
+    if isinstance(ckpt, dict) and 'model' in ckpt:
+        model.load_state_dict(ckpt['model'])
+    else:
+        model.load_state_dict(ckpt)
+    model.eval()
+
+    preds = []
+    proba_list = []
+    y_gt = []
+    progress_iter = tqdm(enumerate(test_data_loader), desc="[eval]", total=len(test_data_loader))
+    for step, (x, y) in progress_iter:
+        x = x.to(device)
+        y = y.float().to(device)
+        with torch.no_grad():
+            y_preds = model(x)
+        if loss_type == "BCE":
+            proba = y_preds.squeeze(1).sigmoid().to('cpu').numpy()
+            proba_list.append(proba)
+            preds.append((proba >= 0.5).astype(int))
+        else:
+            probabilities = F.softmax(y_preds, dim=1)
+            proba = probabilities[:, 1].detach().cpu().numpy()
+            proba_list.append(proba)
+            preds.append(y_preds.argmax(dim=1).to('cpu').numpy())
+
+        y_gt.append(y.to('cpu').numpy())
+    binary_predictions = np.concatenate(preds)
+    proba = np.concatenate(proba_list) if len(proba_list) > 0 else None
+    return binary_predictions, proba
+
+
 def generate_ds_last_layer_retrain(
         tr_df, test_df, clf_image_emb_path, batch_size, seed, n_samples,
         col_name_0="H3_chest_tubes_positioning", col_name_1="H3_chest_tubes_positioning"):
@@ -138,17 +200,38 @@ def generate_ds_last_layer_retrain(
     print(tr_df.shape, img_emb_clf.shape)
     print(tr_df.columns)
 
+    # Map short hypothesis keys (e.g., 'H1') to actual DataFrame columns (e.g., 'H1_benign calcifications')
+    def _map_col(df, name):
+        if name in df.columns:
+            return name
+        for sep in ['_', ' ', '-']:
+            matches = [c for c in df.columns if c.startswith(f"{name}{sep}")]
+            if matches:
+                return matches[0]
+        # fallback: contains
+        matches = [c for c in df.columns if name in c]
+        if matches:
+            return matches[0]
+        return None
+
+    col0 = _map_col(tr_df, col_name_0) or _map_col(test_df, col_name_0)
+    col1 = _map_col(tr_df, col_name_1) or _map_col(test_df, col_name_1)
+    if col0 is None or col1 is None:
+        raise KeyError(f"Could not find columns for hypotheses '{col_name_0}' or '{col_name_1}' in train/test data. Available columns: {list(tr_df.columns)}")
+
+    print(f"Using columns for slicing: {col0} (class 0), {col1} (class 1)")
+
     pt_df = tr_df[(tr_df["out_put_GT"] == 1)]
     print(pt_df.shape)
-    pt_sorted_df = pt_df.sort_values(by=col_name_1, ascending=False)
+    pt_sorted_df = pt_df.sort_values(by=col1, ascending=False)
     pt_top = pt_sorted_df.head(n_samples)
     pt_bottom = pt_sorted_df.tail(n_samples)
 
     no_pt_df = tr_df[(tr_df["out_put_GT"] == 0)]
     print(no_pt_df.shape)
-    no_pt_sorted_df = no_pt_df.sort_values(by=col_name_0, ascending=False)
+    no_pt_sorted_df = no_pt_df.sort_values(by=col0, ascending=False)
     no_pt_top = no_pt_sorted_df.head(n_samples)
-    no_pt_bottom = pt_sorted_df.tail(n_samples)
+    no_pt_bottom = no_pt_sorted_df.tail(n_samples)
     bal_df = pd.concat([pt_top, pt_bottom, no_pt_top, no_pt_bottom], axis=0)
     print(bal_df.shape)
 
@@ -224,10 +307,23 @@ def mitigate_error_slices_waterbirds(args):
         hyp_name = f"all_slices_y_ensemble_yes_land_hyp_{col[0]} | water_hyp_{col[1]}"
 
         model_name = args.save_path / f"{hyp_name}.pth"
-        binary_predictions, _ = last_layer_retrain(
-            clf, args.epochs, train_data_loader, test_data_loader, criterion, optimizer,
-            args.device, model_name, batch_size=args.batch_size, loss_type="CE")
-        test_df.loc[:, f"{hyp_name}_Predictions_bin"] = binary_predictions
+        if args.eval_only:
+            model_file = resolve_model_path(args.save_path, hyp_name)
+            if model_file is None:
+                # try shorter names
+                model_file = resolve_model_path(args.save_path, col[0]) or resolve_model_path(args.save_path, col[1])
+            if model_file is not None:
+                print(f"Evaluating model: {model_file} for hypothesis: {hyp_name}")
+                binary_predictions, _ = load_and_eval(model_file, clf, test_data_loader, args.device, loss_type="CE")
+                test_df.loc[:, f"{hyp_name}_Predictions_bin"] = binary_predictions
+            else:
+                print(f"Model for hypothesis {hyp_name} not found in {args.save_path}, skipping")
+                continue
+        else:
+            binary_predictions, _ = last_layer_retrain(
+                clf, args.epochs, train_data_loader, test_data_loader, criterion, optimizer,
+                args.device, model_name, batch_size=args.batch_size, loss_type="CE")
+            test_df.loc[:, f"{hyp_name}_Predictions_bin"] = binary_predictions
 
         calculate_worst_group_acc_waterbirds(
             test_df, pred_col=f"{hyp_name}_Predictions_bin", attribute_col="attribute_bg_predict"
@@ -294,10 +390,22 @@ def mitigate_error_slices_celebA(args):
         hyp_name = f"all_slices_y_ensemble_yes_{col[0]}"
 
         model_name = args.save_path / f"{hyp_name}.pth"
-        binary_predictions, _ = last_layer_retrain(
-            clf, args.epochs, train_data_loader, test_data_loader, criterion, optimizer,
-            args.device, model_name, batch_size=args.batch_size, loss_type="CE")
-        test_df.loc[:, f"{hyp_name}_Predictions_bin"] = binary_predictions
+        if args.eval_only:
+            model_file = resolve_model_path(args.save_path, hyp_name)
+            if model_file is None:
+                model_file = resolve_model_path(args.save_path, col[0])
+            if model_file is not None:
+                print(f"Evaluating model: {model_file} for hypothesis: {hyp_name}")
+                binary_predictions, _ = load_and_eval(model_file, clf, test_data_loader, args.device, loss_type="CE")
+                test_df.loc[:, f"{hyp_name}_Predictions_bin"] = binary_predictions
+            else:
+                print(f"Model for hypothesis {hyp_name} not found in {args.save_path}, skipping")
+                continue
+        else:
+            binary_predictions, _ = last_layer_retrain(
+                clf, args.epochs, train_data_loader, test_data_loader, criterion, optimizer,
+                args.device, model_name, batch_size=args.batch_size, loss_type="CE")
+            test_df.loc[:, f"{hyp_name}_Predictions_bin"] = binary_predictions
 
         print(f"==================================== Hypothesis: {col} ==================================== \n")
 
@@ -358,11 +466,24 @@ def mitigate_error_slices_rsna(args):
         hyp_name = f"all_slices_y_ensemble_yes_{col[0]}"
 
         model_name = args.save_path / f"{hyp_name}.pth"
-        binary_predictions, proba = last_layer_retrain(
-            clf, args.epochs, train_data_loader, test_data_loader, criterion, optimizer,
-            args.device, model_name, batch_size=args.batch_size, loss_type="BCE")
-        test_df.loc[:, f"{hyp_name}_Predictions_bin"] = binary_predictions
-        test_df.loc[:, f"{hyp_name}_Predictions_proba"] = proba
+        if args.eval_only:
+            model_file = resolve_model_path(args.save_path, hyp_name)
+            if model_file is None:
+                model_file = resolve_model_path(args.save_path, col[0])
+            if model_file is not None:
+                print(f"Evaluating model: {model_file} for hypothesis: {hyp_name}")
+                binary_predictions, proba = load_and_eval(model_file, clf, test_data_loader, args.device, loss_type="BCE")
+                test_df.loc[:, f"{hyp_name}_Predictions_bin"] = binary_predictions
+                test_df.loc[:, f"{hyp_name}_Predictions_proba"] = proba
+            else:
+                print(f"Model for hypothesis {hyp_name} not found in {args.save_path}, skipping")
+                continue
+        else:
+            binary_predictions, proba = last_layer_retrain(
+                clf, args.epochs, train_data_loader, test_data_loader, criterion, optimizer,
+                args.device, model_name, batch_size=args.batch_size, loss_type="BCE")
+            test_df.loc[:, f"{hyp_name}_Predictions_bin"] = binary_predictions
+            test_df.loc[:, f"{hyp_name}_Predictions_proba"] = proba
 
         print(test_df)
         acc_worst_group = calculate_worst_group_acc_rsna_mammo(
@@ -378,12 +499,44 @@ def mitigate_error_slices_rsna(args):
     print("################################################################################################")
     print("############################### Ensemble predictions ########################################")
     print("################################################################################################")
-    max_col = test_df[cols].idxmax(axis=1)
-    pred_col = max_col.apply(lambda x: f"all_slices_y_ensemble_yes_{x}_Predictions")
-    test_df['all_slices_y_ensemble_y_pred_bin'] = test_df.apply(lambda row: row[f"{pred_col[row.name]}_bin"],
-                                                                axis=1)
-    test_df['all_slices_y_ensemble_y_pred_proba'] = test_df.apply(lambda row: row[f"{pred_col[row.name]}_proba"],
-                                                                  axis=1)
+    # Map keys (e.g., 'H1') to actual test_df columns (e.g., 'H1_benign calcifications')
+    def _find_col(df, key):
+        if key in df.columns:
+            return key
+        for sep in ['_', ' ', '-']:
+            matches = [c for c in df.columns if c.startswith(f"{key}{sep}")]
+            if matches:
+                return matches[0]
+        matches = [c for c in df.columns if key in c]
+        if matches:
+            return matches[0]
+        return None
+
+    key_to_col = {}
+    col_to_key = {}
+    found_cols = []
+    for k in cols:
+        mapped = _find_col(test_df, k)
+        if mapped is None:
+            # try train df
+            mapped = _find_col(tr_df, k)
+        if mapped is None:
+            print(f"Warning: could not map hypothesis key {k} to a test dataframe column. Skipping from ensemble.")
+            continue
+        key_to_col[k] = mapped
+        col_to_key[mapped] = k
+        found_cols.append(mapped)
+
+    if len(found_cols) == 0:
+        raise RuntimeError("No hypothesis columns found in test dataframe for ensemble selection.")
+
+    # max_col is the full column name; map it back to hypothesis key for selecting saved predictions
+    max_col = test_df[found_cols].idxmax(axis=1)
+    key_selected = max_col.map(lambda fullcol: col_to_key.get(fullcol))
+    pred_col = key_selected.apply(lambda x: f"all_slices_y_ensemble_yes_{x}_Predictions")
+
+    test_df['all_slices_y_ensemble_y_pred_bin'] = test_df.apply(lambda row: row[f"{pred_col[row.name]}_bin"], axis=1)
+    test_df['all_slices_y_ensemble_y_pred_proba'] = test_df.apply(lambda row: row[f"{pred_col[row.name]}_proba"], axis=1)
     pos_pred_col = "all_slices_y_ensemble_y_pred_proba"
     neg_pred_col = "out_put_predict"
 
@@ -433,11 +586,24 @@ def mitigate_error_slices_nih(args):
         hyp_name = f"all_slices_y_ensemble_yes_{col[0]}"
 
         model_name = args.save_path / f"{hyp_name}.pth"
-        binary_predictions, proba = last_layer_retrain(
-            clf, args.epochs, train_data_loader, test_data_loader, criterion, optimizer,
-            args.device, model_name, batch_size=args.batch_size, loss_type=loss_type)
-        test_df.loc[:, f"{hyp_name}_Predictions_bin"] = binary_predictions
-        test_df.loc[:, f"{hyp_name}_Predictions_proba"] = proba
+        if args.eval_only:
+            model_file = resolve_model_path(args.save_path, hyp_name)
+            if model_file is None:
+                model_file = resolve_model_path(args.save_path, col[0])
+            if model_file is not None:
+                print(f"Evaluating model: {model_file} for hypothesis: {hyp_name}")
+                binary_predictions, proba = load_and_eval(model_file, clf, test_data_loader, args.device, loss_type=loss_type)
+                test_df.loc[:, f"{hyp_name}_Predictions_bin"] = binary_predictions
+                test_df.loc[:, f"{hyp_name}_Predictions_proba"] = proba
+            else:
+                print(f"Model for hypothesis {hyp_name} not found in {args.save_path}, skipping")
+                continue
+        else:
+            binary_predictions, proba = last_layer_retrain(
+                clf, args.epochs, train_data_loader, test_data_loader, criterion, optimizer,
+                args.device, model_name, batch_size=args.batch_size, loss_type=loss_type)
+            test_df.loc[:, f"{hyp_name}_Predictions_bin"] = binary_predictions
+            test_df.loc[:, f"{hyp_name}_Predictions_proba"] = proba
 
         print(test_df)
         print(f"==================================== Hypothesis: {col} ==================================== \n")
@@ -530,6 +696,10 @@ def config():
     parser.add_argument("--seed", default=0, type=int, help="Random seed for reproducibility.")
     parser.add_argument(
         "--device", default="cuda", type=str, help="Device to run training on: 'cuda' or 'cpu'.")
+    parser.add_argument(
+        "--eval_only", action='store_true',
+        help="Skip finetuning and only evaluate saved models in --save_path (expects .pth files created by this script)."
+    )
     return parser.parse_args()
 
 
