@@ -5,11 +5,12 @@ data/
 *.zip
 *.tar.gz
 *.tar
-/src/codebase/tokenizers
-/src/codebase/zz
-/src/codebase/cxr-clip-main/huggingface
-/src/codebase/cxr-clip-main/outputs
-/src/scripts/Neurips/NIH/CXR-CLIP/huggingface
+src/codebase/outputs/huggingface
+src/codebase/tokenizers
+src/codebase/zz
+src/codebase/cxr-clip-main/huggingface
+src/codebase/cxr-clip-main/outputs
+src/scripts/Neurips/NIH/CXR-CLIP/huggingface
 *.png
 data/waterbirds/waterbird_complete95_forest2water2
 data/Vindr/vindr-mammo-a-large-scale-benchmark-dataset-for-computer-aided-detection-and-diagnosis-in-full-field-digital-mammography-1.0.0
