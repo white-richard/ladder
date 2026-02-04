@@ -132,7 +132,19 @@ def create_clip(args):
         print(tokenizer_config)
 
         tokenizer = load_tokenizer(**tokenizer_config) if tokenizer_config is not None else None
-        model = BreastClip(cfg["model"], cfg["loss"], tokenizer)
+        try:
+            model = BreastClip(cfg["model"], cfg["loss"], tokenizer)
+        except Exception as e:
+            text_cfg = cfg.get("model", {}).get("text_encoder", {})
+            cache_dir = text_cfg.get("cache_dir", "<unknown>")
+            name = text_cfg.get("name", "<unknown>")
+            raise RuntimeError(
+                f"Failed to load HuggingFace text encoder '{name}'. It wasn't found in cache '{cache_dir}' "
+                f"and network access appears to be disabled. Please either: 1) provide a local copy of the model via --cache_dir, "
+                f"2) enable internet access so transformers can download the model, or 3) place the model files under the cache dir. "
+                f"Original error: {e}"
+            ) from e
+
         model = model.to(args.device)
         ret = model.load_state_dict(ckpt["model"], strict=False)
         print(ret)
