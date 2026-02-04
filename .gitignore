@@ -15,6 +15,7 @@ src/scripts/Neurips/NIH/CXR-CLIP/huggingface
 data/waterbirds/waterbird_complete95_forest2water2
 data/Vindr/vindr-mammo-a-large-scale-benchmark-dataset-for-computer-aided-detection-and-diagnosis-in-full-field-digital-mammography-1.0.0
 out/
+out2/
 checkpoints/
 logs/
 tmp/
