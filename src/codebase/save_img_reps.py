@@ -100,8 +100,19 @@ def config():
         "--vindr_label_mode",
         default="abnormal",
         type=str,
-        choices=["abnormal", "cancer_birads"],
-        help="Vindr label: 'abnormal' or 'cancer_birads' (breast_birads > 4).",
+        help="Labeling mode for VinDr dataset (e.g., 'abnormal'.",
+    )
+    parser.add_argument(
+        "--vindr_abnormal_birads_min",
+        default=None,
+        type=int,
+        help="Minimum BI-RADS score to label as abnormal in VinDr dataset.",
+    )
+    parser.add_argument(
+        "--eval-only",
+        dest="eval_only",
+        action="store_true",
+        help="Only evaluate model on splits; do not save embeddings to disk.",
     )
     return parser.parse_args()
 
@@ -481,7 +492,7 @@ def process_batch(batch, device, clf, clip_model, classifier_type, dataset):
         return reps_classifier, reps_clip, batch_info
 
 
-def save_reps(loader, device, mode, clf, clip_model, save_path, classifier_type, dataset="breast", debug=False):
+def save_reps(loader, device, mode, clf, clip_model, save_path, classifier_type, dataset="breast", debug=False, eval_only=False):
     """
     Saves feature embeddings and associated metadata for a data split.
 
@@ -495,21 +506,27 @@ def save_reps(loader, device, mode, clf, clip_model, save_path, classifier_type,
         classifier_type (str): Classifier name string.
         dataset (str): Dataset name.
         debug (bool): If True, break after processing the first few batches (for quick debug).
+        eval_only (bool): If True, only compute evaluation metrics and save results; skip saving embeddings to disk.
     """
 
-    all_reps_classifier = []
-    all_reps_clip = []
+    if not eval_only:
+        all_reps_classifier = []
+        all_reps_clip = []
+    else:
+        all_reps_classifier = None
+        all_reps_clip = None
     additional_info = init_additional_info(dataset)
     with torch.no_grad(), tqdm(total=len(loader), desc=f"Processing {mode} data") as t:
         for batch_id, batch in enumerate(loader):
             image_reps_clf, image_reps_clip, batch_info = process_batch(
                 batch, device, clf, clip_model, classifier_type, dataset
             )
-            reps_classifier = [x.detach().cpu().numpy() for x in image_reps_clf]
-            reps_clip = [x.detach().cpu().numpy() for x in image_reps_clip]
-            all_reps_clip.extend(reps_clip)
-            all_reps_classifier.extend(reps_classifier)
-            additional_info = update_additional_info(additional_info, batch_info, dataset)
+            if not eval_only:
+                reps_classifier = [x.detach().cpu().numpy() for x in image_reps_clf]
+                reps_clip = [x.detach().cpu().numpy() for x in image_reps_clip]
+                all_reps_clip.extend(reps_clip)
+                all_reps_classifier.extend(reps_classifier)
+            additional_info = update_additional_info(additional_info, batch_info, dataset)    
 
             t.set_postfix(batch_id=f"{batch_id}")
             t.update()
@@ -517,14 +534,17 @@ def save_reps(loader, device, mode, clf, clip_model, save_path, classifier_type,
                 print("Debug mode: stopping after first few batches.")
                 break
 
-    all_reps_classifier = np.stack(all_reps_classifier)
-    all_reps_clip = np.stack(all_reps_clip)
-    print(
-        f"Classifier {mode} embedding shape: {all_reps_classifier.shape}, "
-        f"Clip {mode} embedding shape: {all_reps_clip.shape} "
-    )
-    np.save(save_path / f"{mode}_classifier_embeddings.npy", all_reps_classifier)
-    np.save(save_path / f"{mode}_clip_embeddings.npy", all_reps_clip)
+    if not eval_only:
+        all_reps_classifier = np.stack(all_reps_classifier)
+        all_reps_clip = np.stack(all_reps_clip)
+        print(
+            f"Classifier {mode} embedding shape: {all_reps_classifier.shape}, "
+            f"Clip {mode} embedding shape: {all_reps_clip.shape} "
+        )
+        np.save(save_path / f"{mode}_classifier_embeddings.npy", all_reps_classifier)
+        np.save(save_path / f"{mode}_clip_embeddings.npy", all_reps_clip)
+    else:
+        print(f"Eval-only mode: Skipped saving {mode} embeddings to disk.")
 
     if dataset.lower() == "urbancars":
         calculate_performance_metrics_urbancars_df(
@@ -537,7 +557,10 @@ def save_reps(loader, device, mode, clf, clip_model, save_path, classifier_type,
         pickle.dump(additional_info, f)
     save_additional_info_to_csv(additional_info, save_path, mode)
 
-    print(f"Saved {mode} embeddings and additional information at {save_path}")
+    if eval_only:
+        print(f"Saved evaluation results and additional information at {save_path}")
+    else:
+        print(f"Saved {mode} embeddings and additional information at {save_path}")
 
 
 def main(args):
@@ -565,6 +588,7 @@ def main(args):
             args.classifier,
             args.dataset,
             args.debug,
+            args.eval_only,
         )
     if "test_loader" in data_loaders:
         save_reps(
@@ -577,6 +601,7 @@ def main(args):
             args.classifier,
             args.dataset,
             args.debug,
+            args.eval_only,
         )
     if "valid_loader" in data_loaders:
         save_reps(
@@ -589,6 +614,7 @@ def main(args):
             args.classifier,
             args.dataset,
             args.debug,
+            args.eval_only,
         )
 
 

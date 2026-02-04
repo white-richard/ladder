@@ -67,6 +67,7 @@ def config():
     parser.add_argument("--log-freq", default=1000, type=int)
     parser.add_argument("--running-interactive", default='n', type=str)
     parser.add_argument("--inference-mode", default='n', type=str)
+    parser.add_argument('--eval-only', action='store_true', help='Shortcut to run evaluation-only (same as --inference-mode y)')
     parser.add_argument('--model-type', default="Classifier", type=str)
     parser.add_argument("--weighted-BCE", default='n', type=str)
     parser.add_argument("--balanced-dataloader", default='n', type=str)
