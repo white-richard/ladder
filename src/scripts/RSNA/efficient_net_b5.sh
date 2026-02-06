@@ -35,7 +35,7 @@ python ./src/codebase/save_text_reps.py \
   --dataset="RSNA" \
   --clip_vision_encoder="tf_efficientnet_b5_ns-detect" \
   --clip_check_pt="out/RSNA/fold0/b5-model-best-epoch-7.tar" \
-  --csv="<csv file containing report texts>" \
+  --csv="data/mammo_radio_report.json" \
   --save_path="out/RSNA/fold{}/aucroc0.89" \
   --tokenizers="" \
   --cache_dir=""
