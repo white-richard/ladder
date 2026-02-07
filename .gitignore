@@ -2,6 +2,7 @@
 data/
 *.lock
 *.safetensors
+out_api/
 *.zip
 *.tar.gz
 *.tar
