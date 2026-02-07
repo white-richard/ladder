@@ -635,7 +635,7 @@ def generate_metadata_chexpert(data_path, test_pct=0.15, val_pct=0.1):
     df.loc[test_idx, 'split'] = 2
 
     # (chexpert_dir / 'subpop_bench_meta').mkdir(exist_ok=True)
-    _dir = "/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/data/chexpert"
+    _dir = "data/chexpert"
     df.to_csv(os.path.join(_dir, "metadata_no_finding.csv"), index=False)
     print(os.path.join(_dir, "metadata_no_finding.csv"))
 

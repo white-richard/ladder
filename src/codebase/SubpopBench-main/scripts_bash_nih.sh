@@ -15,12 +15,12 @@ python /restricted/projectnb/batmanlab/shawn24/PhD/Subpop_data/subpopbench/train
 
 
 
-python /restricted/projectnb/batmanlab/shawn24/PhD/Ladder/src/codebase/SubpopBench-main/subpopbench/train.py \
+python src/codebase/SubpopBench-main/subpopbench/train.py \
        --seed 0 \
        --algorithm "ERM" \
        --dataset "NIH_dataset" \
        --train_attr yes \
-       --data_dir "/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/src/codebase/SubpopBench-main/third_party" \
-       --output_dir "/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/NIH_Cxrclip" \
+       --data_dir "src/codebase/SubpopBench-main/third_party" \
+       --output_dir "out/NIH_Cxrclip" \
        --output_folder_name "resnet_simclr_in1k" \
        --image_arch "resnet_simclr_in1k"
