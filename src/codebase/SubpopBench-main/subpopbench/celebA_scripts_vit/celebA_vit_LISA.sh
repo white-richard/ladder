@@ -14,7 +14,7 @@ slurm_output_train1=Ladder/src/psc_logs/subpopbench/celebA_vit/LISA-$CURRENT.out
 echo "Save image reps"
 source /ocean/projects/asc170022p/shg121/anaconda3/etc/profile.d/conda.sh
 
-conda activate /restricted/projectnb/batmanlab/shawn24/breast_clip_rtx_6000
+conda activate breast_clip_rtx_6000
 
 python Ladder/src/codebase/SubpopBench-main/subpopbench/train.py \
        --seed 0 \

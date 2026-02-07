@@ -433,7 +433,7 @@ class NIH_dataset(SubpopDataset):
         i = self.idx[index]
         img_path = self.x[i]
         img_path = img_path.replace(
-            "/restricted/projectnb/batmanlab/shared/Data/chestXRayDatasets/NIH_ChestXRay/images/images",
+            "Data/chestXRayDatasets/NIH_ChestXRay/images/images",
             "/ocean/projects/asc170022p/shared/Data/chestXRayDatasets/NIH_ChestXRay/images/images"
         )
         x = self.transform(Image.open(img_path).convert('RGB'))

@@ -25,7 +25,7 @@ def config():
                         help='path to output logs')
     parser.add_argument(
         "--data-dir",
-        default="/restricted/projectnb/batmanlab/shared/Data/RSNA_Breast_Imaging/Dataset/",
+        default="Data/RSNA_Breast_Imaging/Dataset/",
         type=str, help="Path to data file"
     )
     parser.add_argument(

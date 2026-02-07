@@ -63,7 +63,7 @@ class Dataset_NIH(Dataset):
         if self.dataset_name.lower() == "mimic":
             img_path = img_path.replace(
                 "/jet/home/nmurali/asc170022p/shared/Projects/shortcut_learning/physionet.org/files/mimic-cxr-jpg/2.0.0/files",
-                "/restricted/projectnb/batmanlab/shared/Data/chestXRayDatasets/mimiccxr_jpg_img_txt_weak_sup/MIMICCXR/files/mimic-cxr-jpg/2.0.0/files")
+                "Data/chestXRayDatasets/mimiccxr_jpg_img_txt_weak_sup/MIMICCXR/files/mimic-cxr-jpg/2.0.0/files")
         raw_img = Image.open(img_path)
         if self.is_rgb:
             img = raw_img.convert("RGB")

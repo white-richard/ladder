@@ -15,7 +15,7 @@ from ladder_api import (
 
 def main() -> None:
     train_cfg = TrainConfig(
-        data_dir="/restricted/projectnb/batmanlab/shared/Data/RSNA_Breast_Imaging/Dataset/",
+        data_dir="Data/RSNA_Breast_Imaging/Dataset/",
         img_dir="RSNA_Cancer_Detection/train_images_png",
         csv_file="RSNA_Cancer_Detection/rsna_w_upmc_concepts_breast_clip.csv",
         dataset="RSNA",
@@ -41,7 +41,7 @@ def main() -> None:
         flattening_type="adaptive",
         clip_vision_encoder="tf_efficientnet_b5_ns-detect",
         clip_check_pt="out/RSNA/fold0/b5-model-best-epoch-7.tar",
-        data_dir="/restricted/projectnb/batmanlab/shared/Data/RSNA_Breast_Imaging/Dataset/RSNA_Cancer_Detection",
+        data_dir="Data/RSNA_Breast_Imaging/Dataset/RSNA_Cancer_Detection",
         save_path="out/RSNA/fold{}",
         tokenizers="src/codebase/outputs/huggingface/tokenizers",
         cache_dir="src/codebase/outputs/huggingface/models",

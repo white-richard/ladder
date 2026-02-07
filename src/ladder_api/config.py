@@ -68,7 +68,7 @@ class TrainConfig(BaseConfig):
     tensorboard_path: PathLike = "Ladder/out/RSNA/log"
     checkpoints: PathLike = "Ladder/out/RSNA/fold0"
     output_path: PathLike = "Ladder/out/RSNA/fold0"
-    data_dir: PathLike = "/restricted/projectnb/batmanlab/shared/Data/RSNA_Breast_Imaging/Dataset/"
+    data_dir: PathLike = "Data/RSNA_Breast_Imaging/Dataset/"
     img_dir: str = "RSNA_Cancer_Detection/train_images_png"
     csv_file: str = ""
     detector_threshold: float = 0.1

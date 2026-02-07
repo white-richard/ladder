@@ -1,15 +1,12 @@
 ## 📚 Table of Contents (Classifiers Section)
 
-- [⚙️ Training Algorithms](#️-training-algorithms)
-- [🧠 Model Architectures & Pretraining](#-model-architectures--pretraining)
-- [🧪 Training Scripts for Different Classifiers](#-training-scripts-for-different-classifiers)
-    - [CelebA](#-celebA)
-    - [MetaShift](#-metashift)
-    - [NIH ChestX-ray (via SubpopBench)](#-nih-chestx-ray-using-subpopshift)
-    - [Waterbirds](#-waterbirds)
-    - [🏥 Training ResNet50 on NIH-CXR](#-training-resnet50-using-erm-resnet_sup_in1k-as-classifier-for-nih-cxr)
-    - [🏥 Training EN-B5 on RSNA-Mammo](#-training-efficientnet-b5-en-b5-using-erm-as-classifier--for-rsna-mammo)
-    - [🏥 Training EN-B5 on VinDr-Mammo](#-training-efficientnet-b5-en-b5--as-classifier--for-vindr-mammo)
+- [📚 Table of Contents (Classifiers Section)](#-table-of-contents-classifiers-section)
+  - [⚙️ Training Algorithms](#️-training-algorithms)
+  - [🧠 Model Architectures \& Pretraining](#-model-architectures--pretraining)
+  - [🧪 Training scripts for different classifiers](#-training-scripts-for-different-classifiers)
+  - [🏥 Training ResNet50 using ERM (`resnet_sup_in1k`) as classifier for NIH-CXR](#-training-resnet50-using-erm-resnet_sup_in1k-as-classifier-for-nih-cxr)
+  - [🏥 Training EfficientNet-B5 (`EN-B5`) using ERM as classifier for RSNA-Mammo](#-training-efficientnet-b5-en-b5-using-erm-as-classifier-for-rsna-mammo)
+  - [🏥 Training EfficientNet-B5 (`EN-B5`) as classifier for VinDr-Mammo](#-training-efficientnet-b5-en-b5-as-classifier-for-vindr-mammo)
 
 ### ⚙️ Training Algorithms
 
@@ -84,7 +81,7 @@ We train the ERM variant for RSNA-Mammo as follows:
 
 ```bash
 python ./src/codebase/train_classifier_Mammo.py \
-  --data-dir '/restricted/projectnb/batmanlab/shared/Data/RSNA_Breast_Imaging/Dataset/' \
+  --data-dir 'Data/RSNA_Breast_Imaging/Dataset/' \
   --img-dir 'RSNA_Cancer_Detection/train_images_png' \
   --csv-file 'RSNA_Cancer_Detection/rsna_w_upmc_concepts_breast_clip.csv' --start-fold 0 --n_folds 1 \
   --dataset 'RSNA' --arch 'tf_efficientnet_b5_ns-detect' --epochs 9 --batch-size 6 --num-workers 0 \
@@ -102,7 +99,7 @@ We train the ERM variant for VinDr-Mammo as follows:
 
 ```bash
 python ./src/codebase/train_classifier_Mammo.py \
-  --data-dir '/restricted/projectnb/batmanlab/shared/Data/RSNA_Breast_Imaging/Dataset' \
+  --data-dir 'Data/RSNA_Breast_Imaging/Dataset' \
   --img-dir 'External/Vindr/vindr-mammo-a-large-scale-benchmark-dataset-for-computer-aided-detection-and-diagnosis-in-full-field-digital-mammography-1.0.0/images_png' \
   --csv-file 'External/Vindr/vindr-mammo-a-large-scale-benchmark-dataset-for-computer-aided-detection-and-diagnosis-in-full-field-digital-mammography-1.0.0/vindr_detection_v1_folds_abnormal.csv' \
   --dataset 'ViNDr' --arch 'tf_efficientnet_b5_ns-detect' --epochs 20 --batch-size 8 --num-workers 0 \

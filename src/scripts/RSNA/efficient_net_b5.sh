@@ -1,6 +1,6 @@
 # Step 1: Create blackbox model using EfficientNet B5 architecture on RSNA dataset
 python ./src/codebase/train_classifier_Mammo.py \
-  --data-dir '/restricted/projectnb/batmanlab/shared/Data/RSNA_Breast_Imaging/Dataset/' \
+  --data-dir 'Data/RSNA_Breast_Imaging/Dataset/' \
   --img-dir 'RSNA_Cancer_Detection/train_images_png' \
   --csv-file 'RSNA_Cancer_Detection/rsna_w_upmc_concepts_breast_clip.csv' --start-fold 0 --n_folds 1 \
   --dataset 'RSNA' --arch 'tf_efficientnet_b5_ns-detect' --epochs 9 --batch-size 6 --num-workers 0 \
@@ -22,7 +22,7 @@ python ./src/codebase/save_img_reps.py \
   --flattening-type="adaptive" \
   --clip_vision_encoder="tf_efficientnet_b5_ns-detect" \
   --clip_check_pt "out/RSNA/fold0/b5-model-best-epoch-7.tar" \
-  --data_dir="/restricted/projectnb/batmanlab/shared/Data/RSNA_Breast_Imaging/Dataset/RSNA_Cancer_Detection" \
+  --data_dir="Data/RSNA_Breast_Imaging/Dataset/RSNA_Cancer_Detection" \
   --save_path="out/RSNA/fold{}/aucroc0.89" \
   --tokenizers="" \
   --cache_dir=""
