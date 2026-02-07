@@ -110,9 +110,9 @@ def overlay_3d_boxes(image, class_label, bias, color1=(255, 255, 0), color2=(255
 
 def main():
     parser = argparse.ArgumentParser(description="Create a 3D toy-shape version of the CUB dataset.")
-    parser.add_argument('--cub_dir', type=str, default='Multimodal-mistakes-debug/data/CUB_200_2011',
+    parser.add_argument('--cub_dir', type=str, default='/restricted/projectnb/batmanlab/shawn24/PhD/Multimodal-mistakes-debug/data/CUB_200_2011',
                         help='Path to the original CUB_200_2011 directory.')
-    parser.add_argument('--output_dir', type=str, default='Multimodal-mistakes-debug/data/',
+    parser.add_argument('--output_dir', type=str, default='/restricted/projectnb/batmanlab/shawn24/PhD/Multimodal-mistakes-debug/data/',
                         help='Directory where the new dataset will be saved.')
     parser.add_argument('--dataset_name', type=str, default='CUB_200_2011_3D_toy_shape',
                         help='Name of the output dataset folder.')

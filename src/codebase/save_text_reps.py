@@ -9,8 +9,6 @@ import numpy as np
 import pandas as pd
 import torch
 from tqdm import tqdm
-import json, pandas as pd, re, os, textwrap
-
 
 from model_factory import create_clip
 # from prompts.prompt import create_waterbirds_prompts, create_rsna_mammo_prompts, create_celebA_prompts, \
@@ -22,6 +20,10 @@ from utils import seed_all, get_input_shape, _split_report_into_segment_breast, 
 warnings.filterwarnings("ignore")
 import argparse
 import os
+
+torch.backends.cudnn.benchmark = True
+torch.backends.cuda.matmul.allow_tf32 = True
+torch.backends.cudnn.allow_tf32 = True
 
 
 def config():
@@ -125,48 +127,14 @@ def save_sent_dict_rsna(args, sent_level=True):
             list: Unique list of report sentences.
     """
     csv = args.csv
-    root, extension = os.path.splitext(csv)
-    if extension.lower() == ".json":
-        in_path = csv
-        with open(in_path,"r") as f:
-            data=json.load(f)
-
-        sentences=[]
-        for attr, d in data.items():
-            for key, prompts in d.items():
-                if isinstance(prompts,list):
-                    for p in prompts:
-                        if isinstance(p,str) and p.strip():
-                            sentences.append(p.strip())
-
-        # de-dup while preserving order
-        seen=set()
-        uniq=[]
-        for s in sentences:
-            if s not in seen:
-                seen.add(s); uniq.append(s)
-
-        # Wrap each prompt in RSNA-style numbered findings so Ladder's splitter keeps it
-        reports=[f"1. {s}." for s in uniq]  # "1." + space + sentence + trailing period
-
-        df=pd.DataFrame({"REPORT": reports})
-        parent_directory = os.path.dirname(in_path)
-        out=f"{parent_directory}/mammo_rad_report.csv"
-        # include explicit index column (so pd.read_csv(..., index_col=0) works)
-        df.to_csv(out)
-        len(uniq), out, df.head(3)
-        csv = out  # update csv path to the newly created one with "REPORT" column
-        
     df = pd.read_csv(csv, index_col=0)
     # df["IMPRESSION"] = df["IMPRESSION"].fillna(" ")
     # df["FINDINGS"] = df["FINDINGS"].fillna(" ")
-    # df["REPORT"] = df["IMPRESSION"] + " " + df["FINDINGS"]
+    # df["Report"] = df["IMPRESSION"] + " " + df["FINDINGS"]
     if sent_level:
         df["REPORT"] = df["REPORT"].apply(_split_report_into_segment_breast)
     else:
         df["REPORT"] = df["REPORT"].apply(_split_report_into_segment_concat)
-
-    print(df["REPORT"])
 
     # Convert the Reports to sentences
     sentences_list = []

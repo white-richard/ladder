@@ -2,9 +2,9 @@
 python ./src/codebase/caption_images.py \
   --seed=0 \
   --dataset="Waterbirds" \
-  --img-path="data/waterbirds/waterbird_complete95_forest2water2" \
-  --csv="data/waterbirds/metadata_waterbirds.csv" \
-  --save_csv="data/waterbirds/va_metadata_waterbirds_captioning_blip.csv" \
+  --img-path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/data/waterbirds/waterbird_complete95_forest2water2" \
+  --csv="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/data/waterbirds/metadata_waterbirds.csv" \
+  --save_csv="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/data/waterbirds/va_metadata_waterbirds_captioning_blip.csv" \
   --split="va" \
   --captioner="blip"
 
@@ -12,9 +12,9 @@ python ./src/codebase/caption_images.py \
 python ./src/codebase/caption_images_gpt_4.py \
   --seed=0 \
   --dataset="Waterbirds" \
-  --img-path="data/waterbirds/waterbird_complete95_forest2water2" \
-  --csv="data/waterbirds/metadata_waterbirds.csv" \
-  --save_csv="data/waterbirds/va_metadata_waterbirds_captioning_GPT.csv" \
+  --img-path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/data/waterbirds/waterbird_complete95_forest2water2" \
+  --csv="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/data/waterbirds/metadata_waterbirds.csv" \
+  --save_csv="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/data/waterbirds/va_metadata_waterbirds_captioning_GPT.csv" \
   --split="va" \
   --model="gpt-4o" \
   --api_key="<open-ai key>"
@@ -24,11 +24,11 @@ python ./src/codebase/save_img_reps.py \
   --seed=0 \
   --dataset="Waterbirds" \
   --classifier="resnet_sup_in1k" \
-  --classifier_check_pt="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/model.pkl" \
+  --classifier_check_pt="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/model.pkl" \
   --flattening-type="adaptive" \
   --clip_vision_encoder="ViT-B/32" \
-  --data_dir="data" \
-  --save_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}"
+  --data_dir="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/data" \
+  --save_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}"
 
 
 # Step 3: Save Text Reps ViT-B/32 captioning
@@ -36,10 +36,10 @@ python ./src/codebase/save_text_reps.py \
   --seed=0 \
   --dataset="Waterbirds" \
   --clip_vision_encoder="ViT-B/32" \
-  --save_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}" \
+  --save_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}" \
   --prompt_sent_type="captioning" \
   --captioning_type="gpt-4o" \
-  --prompt_csv="data/waterbirds/va_metadata_waterbirds_captioning_GPT.csv"
+  --prompt_csv="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/data/waterbirds/va_metadata_waterbirds_captioning_GPT.csv"
 
 
 # Step 4: Train aligner
@@ -47,9 +47,9 @@ python ./src/codebase/learn_aligner.py \
   --seed=0 \
   --epochs=30 \
   --dataset="Waterbirds" \
-  --save_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{0}/clip_img_encoder_ViT-B/32" \
-  --clf_reps_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{0}/clip_img_encoder_ViT-B/32/{1}_classifier_embeddings.npy" \
-  --clip_reps_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{0}/clip_img_encoder_ViT-B/32/{1}_clip_embeddings.npy"
+  --save_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{0}/clip_img_encoder_ViT-B/32" \
+  --clf_reps_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{0}/clip_img_encoder_ViT-B/32/{1}_classifier_embeddings.npy" \
+  --clip_reps_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{0}/clip_img_encoder_ViT-B/32/{1}_clip_embeddings.npy"
 
 
 # Step 5: Retrieving Sentences Indicative of Biases captions
@@ -57,12 +57,12 @@ python ./src/codebase/discover_error_slices.py \
   --seed=0 \
   --topKsent=200 \
   --dataset="Waterbirds" \
-  --save_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32" \
-  --clf_results_csv="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/test_additional_info.csv" \
-  --clf_image_emb_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/test_classifier_embeddings.npy" \
-  --language_emb_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/sent_emb_captions_gpt-4o.npy" \
-  --sent_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/sentences_captions_gpt-4o.pkl" \
-  --aligner_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/aligner_30.pth"
+  --save_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32" \
+  --clf_results_csv="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/test_additional_info.csv" \
+  --clf_image_emb_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/test_classifier_embeddings.npy" \
+  --language_emb_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/sent_emb_captions_gpt-4o.npy" \
+  --sent_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/sentences_captions_gpt-4o.pkl" \
+  --aligner_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/aligner_30.pth"
 
 
 # Step 6: Discovering Error Slices via LLM  caption
@@ -74,11 +74,11 @@ python ./src/codebase/validate_error_slices_w_LLM.py \
   --class_label="landbirds" \
   --clip_vision_encoder="ViT-B/32" \
   --key="<open-ai key>" \
-  --top50-err-text="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/landbirds_error_top_200_sent_diff_emb.txt" \
-  --save_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32" \
-  --clf_results_csv="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/{}_additional_info.csv" \
-  --clf_image_emb_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/{}_classifier_embeddings.npy" \
-  --aligner_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/aligner_30.pth"
+  --top50-err-text="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/landbirds_error_top_200_sent_diff_emb.txt" \
+  --save_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32" \
+  --clf_results_csv="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/{}_additional_info.csv" \
+  --clf_image_emb_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/{}_classifier_embeddings.npy" \
+  --aligner_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/aligner_30.pth"
 
 # class: waterbirds
 python ./src/codebase/validate_error_slices_w_LLM.py \
@@ -88,11 +88,11 @@ python ./src/codebase/validate_error_slices_w_LLM.py \
   --class_label="waterbirds" \
   --clip_vision_encoder="ViT-B/32" \
   --key="<open-ai key>" \
-  --top50-err-text="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/waterbirds_error_top_200_sent_diff_emb.txt" \
-  --save_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32" \
-  --clf_results_csv="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/{}_additional_info.csv" \
-  --clf_image_emb_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/{}_classifier_embeddings.npy" \
-  --aligner_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/aligner_30.pth"
+  --top50-err-text="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/waterbirds_error_top_200_sent_diff_emb.txt" \
+  --save_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32" \
+  --clf_results_csv="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/{}_additional_info.csv" \
+  --clf_image_emb_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/{}_classifier_embeddings.npy" \
+  --aligner_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/aligner_30.pth"
 
 
 # Step 7: Mitigate error slices captions
@@ -105,8 +105,8 @@ python ./src/codebase/mitigate_error_slices.py \
   --mode="last_layer_finetune" \
   --dataset="Waterbirds" \
   --classifier="resnet_sup_in1k" \
-  --slice_names="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/{}_prompt_dict.pkl" \
-  --classifier_check_pt="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/model.pkl" \
-  --save_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32" \
-  --clf_results_csv="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/{}_{}_dataframe_mitigation.csv" \
-  --clf_image_emb_path="out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/{}_classifier_embeddings.npy"
+  --slice_names="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/{}_prompt_dict.pkl" \
+  --classifier_check_pt="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/model.pkl" \
+  --save_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32" \
+  --clf_results_csv="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/{}_{}_dataframe_mitigation.csv" \
+  --clf_image_emb_path="/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/clip_img_encoder_ViT-B/32/{}_classifier_embeddings.npy"

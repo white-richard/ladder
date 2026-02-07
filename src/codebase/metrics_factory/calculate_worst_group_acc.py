@@ -3,11 +3,6 @@ import pandas as pd
 import torchvision
 from sklearn.metrics import roc_auc_score
 
-try:
-    from dataset_factory import UrbanCars
-except Exception:
-    UrbanCars = None
-
 from metrics_factory import auroc, MultiDimAverageMeter
 import logging
 import os
@@ -583,8 +578,7 @@ def calculate_performance_metrics_urbancars_df(clf, loader, split, device, bg_ra
 
 def calculate_performance_metrics_urbancars_df_ensemble(
         df, prediction_col, split, bg_ratio=0.95, co_occur_obj_ratio=0.95, log_file=None):
-    if UrbanCars is None:
-        raise ImportError("UrbanCars dataset is unavailable. Install/enable it to use this function.")
+    raise NotImplementedError("This function is not implemented yet. Please use calculate_performance_metrics_urbancars_df instead.")
     print("################ Computing Whac A Mole Metric ################")
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     normalize = torchvision.transforms.Normalize(
@@ -592,7 +586,7 @@ def calculate_performance_metrics_urbancars_df_ensemble(
     )
     test_transform = torchvision.transforms.Compose([torchvision.transforms.ToTensor(), normalize])
     data_dir = "/restricted/projectnb/batmanlab/rsyed/car/data/"
-    test_set = UrbanCars(data_dir, "test", transform=test_transform)
+    # test_set = UrbanCars(data_dir, "test", transform=test_transform)
 
     loader = torch.utils.data.DataLoader(
         test_set,

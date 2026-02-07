@@ -1,5 +1,5 @@
 #!/bin/sh
-#SBATCH --output=Ladder/src/psc_logs/subpopbench/celebA_vit/LDAM-%j.out
+#SBATCH --output=/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/src/psc_logs/subpopbench/celebA_vit/LDAM-%j.out
 
 pwd
 hostname
@@ -9,19 +9,19 @@ CURRENT=$(date +"%Y-%m-%d_%T")
 
 echo $CURRENT
 
-slurm_output_train1=Ladder/src/psc_logs/subpopbench/celebA_vit/LDAM-$CURRENT.out
+slurm_output_train1=/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/src/psc_logs/subpopbench/celebA_vit/LDAM-$CURRENT.out
 
 echo "Save image reps"
 source /ocean/projects/asc170022p/shg121/anaconda3/etc/profile.d/conda.sh
 
-conda activate breast_clip_rtx_6000
+conda activate /restricted/projectnb/batmanlab/shawn24/breast_clip_rtx_6000
 
-python Ladder/src/codebase/SubpopBench-main/subpopbench/train.py \
+python /restricted/projectnb/batmanlab/shawn24/PhD/Ladder/src/codebase/SubpopBench-main/subpopbench/train.py \
        --seed 0 \
        --algorithm "LDAM" \
        --dataset "CelebA" \
        --train_attr yes \
-       --data_dir "Ladder/data" \
-       --output_dir "Ladder/out/CelebA/LDAM" \
+       --data_dir "/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/data" \
+       --output_dir "/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/CelebA/LDAM" \
        --output_folder_name "vit_sup_in1k" \
        --image_arch "vit_sup_in1k" >$slurm_output_train1

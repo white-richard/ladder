@@ -15,17 +15,17 @@ import pickle
 def config():
     parser = argparse.ArgumentParser()
     parser.add_argument('--tensorboard-path', metavar='DIR',
-                        default='Ladder/out/RSNA/log',
+                        default='/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/RSNA/log',
                         help='path to tensorboard logs')
     parser.add_argument('--checkpoints', metavar='DIR',
-                        default='Ladder/out/RSNA/fold0',
+                        default='/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/RSNA/fold0',
                         help='path to checkpoints')
     parser.add_argument('--output_path', metavar='DIR',
-                        default='Ladder/out/RSNA/fold0',
+                        default='/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/RSNA/fold0',
                         help='path to output logs')
     parser.add_argument(
         "--data-dir",
-        default="Data/RSNA_Breast_Imaging/Dataset/",
+        default="/restricted/projectnb/batmanlab/shared/Data/RSNA_Breast_Imaging/Dataset/",
         type=str, help="Path to data file"
     )
     parser.add_argument(
@@ -67,7 +67,6 @@ def config():
     parser.add_argument("--log-freq", default=1000, type=int)
     parser.add_argument("--running-interactive", default='n', type=str)
     parser.add_argument("--inference-mode", default='n', type=str)
-    parser.add_argument('--eval-only', action='store_true', help='Shortcut to run evaluation-only (same as --inference-mode y)')
     parser.add_argument('--model-type', default="Classifier", type=str)
     parser.add_argument("--weighted-BCE", default='n', type=str)
     parser.add_argument("--balanced-dataloader", default='n', type=str)

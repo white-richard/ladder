@@ -11,6 +11,8 @@ import math
 import collections
 from functools import partial
 import torch
+import os
+import tempfile
 from torch import nn
 from torch.nn import functional as F
 from torch.utils import model_zoo
@@ -597,9 +599,17 @@ def load_pretrained_weights(model, model_name, weights_path=None, load_fc=True, 
     if isinstance(weights_path, str):
         state_dict = torch.load(weights_path)
     else:
-        # AutoAugment or Advprop (different preprocessing)
         url_map_ = url_map_advprop if advprop else url_map
-        state_dict = model_zoo.load_url(url_map_[model_name])
+        url = url_map_[model_name]
+        try:
+            state_dict = model_zoo.load_url(url)
+        except PermissionError:
+            # Default cache dir isn't writable (e.g. TORCH_HOME points to /restricted).
+            # Retry using a fallback writable directory (temporary directory).
+            fallback_dir = os.path.join(tempfile.gettempdir(), 'torch', 'hub', 'checkpoints')
+            if verbose:
+                print(f"Warning: could not write to default torch cache dir; using fallback model_dir={fallback_dir}")
+            state_dict = model_zoo.load_url(url, model_dir=fallback_dir)
 
     if load_fc:
         ret = model.load_state_dict(state_dict, strict=False)

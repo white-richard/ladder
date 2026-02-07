@@ -23,6 +23,10 @@ import base64
 
 import re
 
+torch.backends.cudnn.benchmark = True
+torch.backends.cuda.matmul.allow_tf32 = True
+torch.backends.cudnn.allow_tf32 = True
+
 
 def config():
     parser = argparse.ArgumentParser(description="Discovering Error Slices via LLM  using LLM-generated hypotheses and CLIP.")

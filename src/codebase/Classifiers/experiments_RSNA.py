@@ -128,19 +128,11 @@ def do_experiments(args, device):
             args.BCE_weights[f"fold{args.cur_fold}"] = args.train_folds[args.train_folds[args.label] == 0].shape[0] / \
                                                        args.train_folds[args.train_folds[args.label] == 1].shape[0]
 
-        # If inference_mode is enabled or eval-only flag set, skip training and only run evaluation (validation predictions)
-        if getattr(args, 'inference_mode', 'n') == 'y' or getattr(args, 'eval_only', False):
-            print(f'Fold {args.cur_fold}: Running in evaluation-only mode (inference).')
-            _oof_df = inference_loop(args, device)
-        else:
-            _oof_df = train_loop(args, device)
+        _oof_df = train_loop(args, device)
         oof_df = pd.concat([oof_df, _oof_df])
 
     oof_df = oof_df.reset_index(drop=True)
     oof_df['prediction_bin'] = oof_df['prediction'].apply(lambda x: 1 if x >= 0.5 else 0)
-
-    if 'fold' not in oof_df.columns:
-        oof_df['fold'] = args.cur_fold
 
     oof_df_agg = oof_df[['patient_id', 'laterality', args.label, 'prediction', 'fold']].groupby(
         ['patient_id', 'laterality']).mean()
@@ -352,51 +344,3 @@ def valid_fn(valid_loader, model, criterion, args, device, epoch=1, attr_embs=No
     else:
         predictions = np.concatenate(preds)
     return losses.avg, predictions
-
-
-def inference_loop(args, device):
-    """Run validation inference for the current fold using a saved checkpoint.
-
-    Loads the best checkpoint for the fold and runs `valid_fn` over the validation loader
-    to produce and attach `prediction` to `args.valid_folds` (consistent with training flow).
-    """
-    print(f'\n================== fold: {args.cur_fold} inference ======================')
-
-    # Ensure attributes required by dataloader exist (prevents AttributeError when running inference-only)
-    if not hasattr(args, 'image_encoder_type'):
-        args.image_encoder_type = None
-
-    # Build loaders
-    train_loader, valid_loader = get_dataloader_mammo(args)
-
-    # Build model
-    n_class = 1
-    model = EfficientNet.from_pretrained("efficientnet-b5", num_classes=n_class)
-    model_name = f'{args.model_base_name}_seed_{args.seed}_fold{args.cur_fold}_best_aucroc_ver{args.VER}.pth'
-    ckpt_path = args.chk_pt_path / model_name
-    if not ckpt_path.exists():
-        print(f'Checkpoint not found: {ckpt_path}. Skipping inference for this fold.')
-        return args.valid_folds
-
-    checkpoint = torch.load(ckpt_path, map_location=device)
-    # support different checkpoint key names
-    if 'model' in checkpoint:
-        model.load_state_dict(checkpoint['model'])
-    elif 'state_dict' in checkpoint:
-        model.load_state_dict(checkpoint['state_dict'])
-    model = model.to(device)
-    model.eval()
-
-    # Build criterion -- fallback to pos weight 1.0 if not available
-    if hasattr(args, 'BCE_weights') and f"fold{args.cur_fold}" in args.BCE_weights:
-        pos_wt = torch.tensor([args.BCE_weights[f"fold{args.cur_fold}"]]).to(device)
-    else:
-        pos_wt = torch.tensor([1.0]).to(device)
-    criterion = torch.nn.BCEWithLogitsLoss(reduction='mean', pos_weight=pos_wt)
-
-    # Run validation pass
-    avg_val_loss, predictions = valid_fn(valid_loader, model, criterion, args, device)
-
-    # Attach predictions and return the dataframe for aggregation
-    args.valid_folds['prediction'] = predictions
-    return args.valid_folds

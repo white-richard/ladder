@@ -730,7 +730,7 @@ class Dataset_NIH(Dataset):
         img_path = str(self.df.iloc[idx]["path"])
         img_path = img_path.replace(
             "/ocean/projects/asc170022p/shared/Data/chestXRayDatasets/NIH_ChestXRay/images/images",
-            "Data/chestXRayDatasets/NIH_ChestXRay/images/images",
+            "/restricted/projectnb/batmanlab/shared/Data/chestXRayDatasets/NIH_ChestXRay/images/images",
         )
         raw_img = Image.open(img_path)
         img = raw_img.convert("RGB")

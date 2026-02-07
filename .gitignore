@@ -4,6 +4,7 @@ data/
 *.safetensors
 out_api/
 *.zip
+old/
 *.tar.gz
 *.tar
 src/codebase/outputs/huggingface

@@ -16,6 +16,9 @@ warnings.filterwarnings("ignore")
 import argparse
 import os
 
+torch.backends.cudnn.benchmark = True
+torch.backends.cuda.matmul.allow_tf32 = True
+torch.backends.cudnn.allow_tf32 = True
 
 def get_sentences_for_err_slices(
         df_fold_corr_indx, df_fold_incorr_indx, clf_image_emb_path, language_emb_path, aligner_path, sent_path,

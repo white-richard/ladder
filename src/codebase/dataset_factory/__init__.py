@@ -78,13 +78,6 @@ def get_rsna_dataloaders(args):
         train_df = df[df["split_new"] == "train"].reset_index(drop=True)
         valid_df = df[df["split_new"] == "val"].reset_index(drop=True)
         test_df = df[df["split_new"] == "test"].reset_index(drop=True)
-        vindr_label_mode = getattr(args, "vindr_label_mode", "abnormal")
-
-        vindr_abnormal_birads_min = getattr(args, "vindr_abnormal_birads_min", 4)
-        if vindr_label_mode == "abnormal" and vindr_abnormal_birads_min is not None:
-            for _df in (train_df, valid_df, test_df):
-                _df["breast_birads_num"] = pd.to_numeric(_df["breast_birads"], errors="coerce")
-                _df["abnormal"] = (_df["breast_birads_num"] >= vindr_abnormal_birads_min).astype(int)
         label_col = "abnormal"
 
     train_dataset = RSNADataset(
