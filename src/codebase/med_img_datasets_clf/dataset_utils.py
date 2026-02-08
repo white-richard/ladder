@@ -14,6 +14,10 @@ from .dataset_mammo import MammoDataset, collator_mammo_dataset_w_concepts
 from .custom_datasets import SubsetDataset
 
 
+def _is_mammo_dataset(dataset):
+    return dataset.lower() in {"rsna", "vindr", "cbis", "cbis-ddsm"}
+
+
 class center_crop(object):
     def crop_center(self, img):
         _, y, x = img.shape
@@ -45,9 +49,7 @@ def get_transforms(args):
             torchvision.transforms.ToTensor(),
             torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
-    elif (args.dataset.lower() == "rsna" or args.dataset.lower() == "vindr") and (
-            args.model_type.lower() == "classifier"
-    ):
+    elif _is_mammo_dataset(args.dataset) and args.model_type.lower() == "classifier":
         return Compose([
             HorizontalFlip(),
             VerticalFlip(),
@@ -185,5 +187,5 @@ def get_dataloader_mammo(args):
 def get_dataset(args, is_train_mode=True, is_classifier=True, train=True):
     if args.dataset == "NIH" or args.dataset.lower() == "mimic":
         return get_dataloader_CXR(args, is_train_mode=is_train_mode, is_classifier=is_classifier)
-    elif args.dataset.lower() == "rsna" and args.model_type.lower() == "classifier":
+    elif _is_mammo_dataset(args.dataset) and args.model_type.lower() == "classifier":
         return get_dataloader_mammo(args)

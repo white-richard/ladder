@@ -554,8 +554,11 @@ class RSNADataset(Dataset):
         self.std = std
         self.label_col = label_col
         self.dataset = dataset
+        self.dataset_name = str(dataset).lower()
+        if self.dataset_name == "cbis-ddsm":
+            self.dataset_name = "cbis"
 
-        if self.dataset.lower() == "vindr":
+        if self.dataset_name in {"vindr", "cbis"} and "patient_id" in df.columns:
             unique_patient_ids = {id: idx for idx, id in enumerate(df['patient_id'].unique())}
             self.df['patient_id_idx'] = self.df['patient_id'].map(unique_patient_ids)
 
@@ -564,14 +567,22 @@ class RSNADataset(Dataset):
 
     def __getitem__(self, idx):
         data = self.df.iloc[idx]
-        if self.dataset.lower() == 'rsna':
+        if self.dataset_name == 'rsna':
             img_path = str(
                 self.data_dir / "train_images_png" / str(self.df.iloc[idx]['patient_id']) / str(
                     self.df.iloc[idx]['image_id']))
-        elif self.dataset.lower() == 'vindr':
+        elif self.dataset_name == 'vindr':
             img_path = str(
                 self.data_dir / "images_png" / str(self.df.iloc[idx]['patient_id']) / str(
                     self.df.iloc[idx]['image_id']))
+        elif self.dataset_name == 'cbis':
+            raw_path = data.get("png_path", "")
+            img_path = Path(raw_path)
+            if not img_path.is_absolute():
+                img_path = self.data_dir / img_path
+            img_path = str(img_path)
+        else:
+            raise ValueError(f"Unsupported mammography dataset: {self.dataset}")
 
         img = Image.open(img_path).convert('RGB')
         img = np.array(img)
@@ -581,28 +592,38 @@ class RSNADataset(Dataset):
 
         img = img.astype('float32')
         img -= img.min()
-        img /= img.max()
+        max_val = img.max()
+        if max_val > 0:
+            img /= max_val
         img = torch.tensor((img - self.mean) / self.std, dtype=torch.float32)
 
         label = torch.tensor(data[self.label_col], dtype=torch.long)
-        clip = torch.tensor(data["CLIP_V1_bin"], dtype=torch.long)
-        scar = torch.tensor(data["SCAR_V1_bin"], dtype=torch.long)
-        mark = torch.tensor(data["MARK_V1_bin"], dtype=torch.long)
-        mole = torch.tensor(data["MOLE_V1_bin"], dtype=torch.long)
+        clip = torch.tensor(data.get("CLIP_V1_bin", 0), dtype=torch.long)
+        scar = torch.tensor(data.get("SCAR_V1_bin", 0), dtype=torch.long)
+        mark = torch.tensor(data.get("MARK_V1_bin", 0), dtype=torch.long)
+        mole = torch.tensor(data.get("MOLE_V1_bin", 0), dtype=torch.long)
         laterality_tensor = torch.tensor(data["laterality"], dtype=torch.long)
 
         mass = None
         calc = None
-        if self.dataset.lower() == 'rsna':
-            calc = torch.tensor(data["Suspicious_Calcification_th_0.25"], dtype=torch.long)
-            mass = torch.tensor(data["Mass_th_0.15"], dtype=torch.long)
+        if self.dataset_name == 'rsna':
+            calc = torch.tensor(data.get("Suspicious_Calcification_th_0.25", 0), dtype=torch.long)
+            mass = torch.tensor(data.get("Mass_th_0.15", 0), dtype=torch.long)
             fold = torch.tensor(data["fold"], dtype=torch.long)
             patient_id = torch.tensor(data["patient_id"], dtype=torch.long)
-        elif self.dataset.lower() == 'vindr':
-            calc = torch.tensor(data["Suspicious_Calcification"], dtype=torch.long)
-            mass = torch.tensor(data["Mass"], dtype=torch.long)
+        elif self.dataset_name == 'vindr':
+            calc = torch.tensor(data.get("Suspicious_Calcification", 0), dtype=torch.long)
+            mass = torch.tensor(data.get("Mass", 0), dtype=torch.long)
             fold = torch.tensor(1, dtype=torch.long)
             patient_id = torch.tensor(data["patient_id_idx"], dtype=torch.long)
+        elif self.dataset_name == 'cbis':
+            calc = torch.tensor(data.get("Suspicious_Calcification", 0), dtype=torch.long)
+            mass = torch.tensor(data.get("Mass", 0), dtype=torch.long)
+            fold = torch.tensor(1, dtype=torch.long)
+            if "patient_id_idx" in self.df.columns:
+                patient_id = torch.tensor(data["patient_id_idx"], dtype=torch.long)
+            else:
+                patient_id = torch.tensor(idx, dtype=torch.long)
         return {
             'img': img,
             'label': label,
@@ -730,7 +751,7 @@ class Dataset_NIH(Dataset):
         img_path = str(self.df.iloc[idx]["path"])
         img_path = img_path.replace(
             "/ocean/projects/asc170022p/shared/Data/chestXRayDatasets/NIH_ChestXRay/images/images",
-            "/restricted/projectnb/batmanlab/shared/Data/chestXRayDatasets/NIH_ChestXRay/images/images",
+            "s",
         )
         raw_img = Image.open(img_path)
         img = raw_img.convert("RGB")
@@ -769,4 +790,3 @@ def collate_NIH(batch):
         "text": text,
         "img_path": img_path
     }
-

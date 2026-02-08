@@ -13,6 +13,10 @@ from cxrclip.model import CXRClip
 from utils import get_hparams
 
 
+def _is_mammo_dataset(dataset):
+    return dataset.lower() in {"rsna", "vindr", "embed", "cbis", "cbis-ddsm"}
+
+
 def get_vision_clf(data_type, input_shape, num_classes, hparams, checkpoint, device, mode="eval"):
     feature_maps = networks.Featurizer(data_type, input_shape, hparams)
     classifier = networks.Classifier(
@@ -61,9 +65,7 @@ def create_classifier(args, mode="eval"):
             clf.eval()
         print("NIH Classifier loaded successfully")
         return clf
-    elif (
-            args.dataset.lower() == "rsna" or args.dataset.lower() == "vindr" or args.dataset.lower() == "embed"
-    ) and args.classifier.lower() == "efficientnet-b5":
+    elif _is_mammo_dataset(args.dataset) and args.classifier.lower() == "efficientnet-b5":
         num_classes = 1
         args.classifier_check_pt = args.classifier_check_pt.format(args.seed)
         clf = MammoClassifier(args.classifier, args.classifier_check_pt, num_classes)
@@ -107,7 +109,7 @@ def create_clip(args):
             "tokenizer": tokenizer,
             "type": "cxr_clip",
         }
-    elif args.dataset.lower() == "rsna" or args.dataset.lower() == "vindr":
+    elif _is_mammo_dataset(args.dataset):
         ckpt = torch.load(args.clip_check_pt, map_location="cpu")
         cfg = ckpt["config"]
         tokenizer_config = cfg["tokenizer"]

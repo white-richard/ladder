@@ -12,6 +12,7 @@ from dataset_factory import create_dataloaders
 from metrics_factory import eval_metrics_vision, pfbeta_binarized, pr_auc, auroc, compute_auprc, \
     compute_accuracy_np_array
 from metrics_factory.calculate_worst_group_acc import calculate_performance_metrics_urbancars_df
+from mammo_metrics import aggregate_mammo_predictions, is_mammo_dataset, safe_binary_auroc
 from model_factory import create_classifier, create_clip
 from utils import seed_all, get_input_shape
 
@@ -121,7 +122,7 @@ def compute_performance_metrics(dataset, additional_info, save_path, mode):
                 pd.DataFrame(final_results['per_group']).T['accuracy'].values,
                 separator=', ', formatter={'float_kind': lambda x: "%.3f" % x}))))
 
-    elif dataset.lower() == 'rsna' or dataset.lower() == "vindr":
+    elif is_mammo_dataset(dataset):
         for key, value in additional_info.items():
             if isinstance(value, torch.Tensor):
                 additional_info[key] = value.numpy()
@@ -129,18 +130,24 @@ def compute_performance_metrics(dataset, additional_info, save_path, mode):
                 additional_info[key] = np.concatenate(value)
 
         df = pd.DataFrame(additional_info)
-        oof_df_agg = df[['patient_id', 'laterality', "out_put_GT", 'out_put_predict']].groupby(
-            ['patient_id', 'laterality']).mean()
+        oof_df_agg = aggregate_mammo_predictions(
+            df[['patient_id', 'laterality', "out_put_GT", 'out_put_predict']].copy(),
+            label_col="out_put_GT",
+            prediction_col="out_put_predict",
+        )
         np_gt = oof_df_agg["out_put_GT"].values
         np_preds = oof_df_agg["out_put_predict"].values
 
-        aucroc = auroc(np_gt, np_preds)
+        aucroc = safe_binary_auroc(np_gt, np_preds)
 
         mask = np_gt == 1
         np_gt_cancer = np_gt[mask]
         np_preds_cancer = np_preds[mask]
         np_preds_cancer = (np_preds_cancer >= 0.5).astype(int)
-        acc_cancer = compute_accuracy_np_array(np_gt_cancer, np_preds_cancer)
+        if np_gt_cancer.size == 0:
+            acc_cancer = float("nan")
+        else:
+            acc_cancer = compute_accuracy_np_array(np_gt_cancer, np_preds_cancer)
 
         print(f"aucroc: {aucroc} acc_cancer: {acc_cancer}")
 
@@ -201,7 +208,7 @@ def init_additional_info(dataset):
             "idx": [],
             "gs": []
         }
-    elif dataset.lower() == "rsna" or dataset.lower() == "vindr":
+    elif is_mammo_dataset(dataset):
         return {
             "patient_id": torch.IntTensor(),
             "laterality": torch.IntTensor(),
@@ -263,7 +270,7 @@ def update_additional_info(additional_info, batch_info, dataset):
         additional_info["img_path"].append(img_path)
         return additional_info
 
-    elif dataset.lower() == "rsna" or dataset.lower() == "vindr":
+    elif is_mammo_dataset(dataset):
         y, y_pred, mass, calc, mole, mark, scar, clip, patient_id, laterality = batch_info["y"], batch_info["y_pred"], \
             batch_info["mass"], batch_info["calc"], \
             batch_info["mole"], batch_info["mark"], \
@@ -318,7 +325,7 @@ def process_batch(batch, device, clf, clip_model, classifier_type, dataset):
         batch_info = {"idx": i, "y": y, "y_pred": y_pred, "bg_attr": bg_attr}
         return reps_classifier, reps_clip, batch_info
 
-    elif dataset.lower() == "rsna" or dataset.lower() == "vindr":
+    elif is_mammo_dataset(dataset):
         img = batch['img'].permute(0, 3, 1, 2).to(device)
         y = batch['label']
         mass = batch['mass']

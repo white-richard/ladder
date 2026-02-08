@@ -12,20 +12,25 @@ import os
 import pickle
 
 
+def _normalize_mammo_dataset_name(dataset):
+    name = str(dataset).lower()
+    return "cbis" if name == "cbis-ddsm" else name
+
+
 def config():
     parser = argparse.ArgumentParser()
     parser.add_argument('--tensorboard-path', metavar='DIR',
-                        default='/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/RSNA/log',
+                        default='out/RSNA/log',
                         help='path to tensorboard logs')
     parser.add_argument('--checkpoints', metavar='DIR',
-                        default='/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/RSNA/fold0',
+                        default='out/RSNA/fold0',
                         help='path to checkpoints')
     parser.add_argument('--output_path', metavar='DIR',
-                        default='/restricted/projectnb/batmanlab/shawn24/PhD/Ladder/out/RSNA/fold0',
+                        default='out/RSNA/fold0',
                         help='path to output logs')
     parser.add_argument(
         "--data-dir",
-        default="/restricted/projectnb/batmanlab/shared/Data/RSNA_Breast_Imaging/Dataset/",
+        default="",
         type=str, help="Path to data file"
     )
     parser.add_argument(
@@ -101,20 +106,25 @@ def main(args):
     pickle.dump(args, open(os.path.join(args.output_path, f"seed_{args.seed}_train_configs.pkl"), "wb"))
     torch.cuda.empty_cache()
 
-    if args.weighted_BCE == "y" and args.dataset.lower() == "rsna" and args.label.lower() == "cancer":
+    dataset_name = _normalize_mammo_dataset_name(args.dataset)
+
+    if args.weighted_BCE == "y" and dataset_name == "rsna" and args.label.lower() == "cancer":
         args.BCE_weights = {
             "fold0": 46.48148148148148,
             "fold1": 46.01830663615561,
             "fold2": 46.41339491916859,
             "fold3": 46.05747126436781
         }
-    elif args.weighted_BCE == "y" and args.dataset.lower() == "vindr" and args.label.lower() == "cancer":
+    elif args.weighted_BCE == "y" and dataset_name == "vindr" and args.label.lower() == "cancer":
         args.BCE_weights = {
             "fold0": 12.756594724220623,
             "fold1": 12.756594724220623,
             "fold2": 12.756594724220623,
             "fold3": 12.756594724220623
         }
+    elif args.weighted_BCE == "y" and dataset_name == "cbis" and args.label.lower() == "cancer":
+        # Per-fold weights are computed from train split distribution in do_experiments.
+        args.BCE_weights = {}
     do_experiments(args, device)
 
 

@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import torch
 
+from mammo_metrics import is_mammo_dataset, normalize_mammo_dataset_name
 from metrics_factory.calculate_worst_group_acc import calculate_worst_group_acc_waterbirds, \
     calculate_worst_group_acc_rsna_mammo, calculate_worst_group_acc_celebA, \
     calculate_worst_group_acc_metashift, calculate_worst_group_acc_chexpert_no_findings, \
@@ -19,6 +20,11 @@ import os
 torch.backends.cudnn.benchmark = True
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
+
+
+def _mammo_positive_label(dataset):
+    return "abnormal" if normalize_mammo_dataset_name(dataset) == "vindr" else "cancer"
+
 
 def get_sentences_for_err_slices(
         df_fold_corr_indx, df_fold_incorr_indx, clf_image_emb_path, language_emb_path, aligner_path, sent_path,
@@ -295,9 +301,10 @@ def discover_error_slices_via_sent_mammo(
 
     cancer_df_corr_indx = df[(df["out_put_GT"] == 1) & (df[pred_col] == 1)].index.tolist()
     cancer_df_incorr_indx = df[(df["out_put_GT"] == 1) & (df[pred_col] == 0)].index.tolist()
-    diff_save_file = f"cancer_error_top_{topKsent}_sent_diff_emb.txt" if dataset == "rsna" else f"abnormal_error_top_{topKsent}_sent_diff_emb.txt"
-    corr_save_file = f"cancer_error_top_{topKsent}_sent_corr_emb.txt" if dataset == "rsna" else f"cancer_error_top_{topKsent}_sent_corr_emb.txt"
-    incorr_save_file = f"cancer_error_top_{topKsent}_sent_incorr_emb.txt" if dataset == "rsna" else f"cancer_error_top_{topKsent}_sent_incorr_emb.txt"
+    label_prefix = _mammo_positive_label(dataset)
+    diff_save_file = f"{label_prefix}_error_top_{topKsent}_sent_diff_emb.txt"
+    corr_save_file = f"{label_prefix}_error_top_{topKsent}_sent_corr_emb.txt"
+    incorr_save_file = f"{label_prefix}_error_top_{topKsent}_sent_incorr_emb.txt"
 
     get_sentences_for_err_slices(
         cancer_df_corr_indx, cancer_df_incorr_indx, clf_image_emb_path, language_emb_path, aligner_path,
@@ -383,10 +390,10 @@ def discover_error_slices_via_sent(
             save_path, clf_results_csv, clf_image_emb_path, language_emb_path, aligner_path, sent_path, topKsent,
             prediction_col=prediction_col)
 
-    elif dataset.lower() == "rsna" or dataset.lower() == "vindr":
+    elif is_mammo_dataset(dataset):
         discover_error_slices_via_sent_mammo(
             save_path, clf_results_csv, clf_image_emb_path, language_emb_path, aligner_path, sent_path, topKsent,
-            prediction_col=prediction_col, out_file=out_file, dataset=dataset.lower())
+            prediction_col=prediction_col, out_file=out_file, dataset=dataset)
 
     elif dataset.lower() == "nih":
         discover_error_slices_via_sent_nih(

@@ -8,7 +8,7 @@ import torch
 from torch.utils.data import TensorDataset, DataLoader
 from tqdm import tqdm
 
-from metrics import auroc
+from mammo_metrics import is_mammo_dataset, safe_binary_auroc
 from metrics_factory.calculate_worst_group_acc import calculate_worst_group_acc_waterbirds, \
     calculate_worst_group_acc_rsna_mammo, calculate_worst_group_acc_celebA, calculate_worst_group_acc_med_img, \
     calculate_worst_group_acc_metashift
@@ -103,7 +103,7 @@ def last_layer_retrain(
         proba = np.concatenate(proba_list)
         np_gt = gt
         np_preds = proba
-        aucroc = auroc(np_gt, np_preds)
+        aucroc = safe_binary_auroc(np_gt, np_preds)
 
         print("==================================== Overall Metrics =====================================")
         print(f"aucroc: {aucroc}")
@@ -548,7 +548,7 @@ def main(args):
         mitigate_error_slices_waterbirds(args)
     elif args.dataset.lower() == "celeba":
         mitigate_error_slices_celebA(args)
-    elif args.dataset.lower() == "rsna" or args.dataset.lower() == "vindr":
+    elif is_mammo_dataset(args.dataset):
         mitigate_error_slices_rsna(args)
     elif args.dataset.lower() == "nih":
         mitigate_error_slices_nih(args)

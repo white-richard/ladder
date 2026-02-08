@@ -1,4 +1,5 @@
 from collections import defaultdict
+from pathlib import Path
 
 import cv2
 import matplotlib.patches as patches
@@ -10,6 +11,11 @@ from PIL import Image
 from imgaug.augmentables.bbs import BoundingBox, BoundingBoxesOnImage
 from torch.utils.data import Dataset
 import ast
+
+
+def _normalize_mammo_dataset_name(dataset):
+    name = str(dataset).lower()
+    return "cbis" if name == "cbis-ddsm" else name
 
 
 class MammoDataset(Dataset):
@@ -29,15 +35,23 @@ class MammoDataset(Dataset):
 
     def __getitem__(self, idx):
         data = self.df.iloc[idx]
+        dataset_name = _normalize_mammo_dataset_name(self.dataset)
 
-        if self.dataset.lower() == "rsna":
+        if dataset_name == "rsna":
             img_path = self.dir_path / str(self.df.iloc[idx]['patient_id']) / str(self.df.iloc[idx]['image_id'])
             img_path = f'{img_path}.png'
-        elif self.dataset.lower() == "vindr":
+        elif dataset_name == "vindr":
             img_path = self.dir_path / str(self.df.iloc[idx]['patient_id']) / str(self.df.iloc[idx]['image_id'])
-        elif self.dataset.lower() == "embed":
+        elif dataset_name == "embed":
             img_path = self.dir_path / str(self.df.iloc[idx]['anon_dicom_path'])
             img_path = str(img_path).replace('.dcm', '.png')
+        elif dataset_name == "cbis":
+            raw_path = Path(str(self.df.iloc[idx]["png_path"]))
+            if not raw_path.is_absolute():
+                raw_path = Path(self.args.data_dir) / raw_path
+            img_path = raw_path
+        else:
+            raise ValueError(f"Unsupported mammography dataset: {self.dataset}")
         if (
                 self.image_encoder_type == "swin" or
                 self.image_encoder_type == "tf_efficientnetv2-detect" or

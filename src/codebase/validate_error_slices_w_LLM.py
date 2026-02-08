@@ -16,6 +16,7 @@ import json
 import json
 from openai import OpenAI
 
+from mammo_metrics import is_mammo_dataset
 from model_factory import create_clip
 from prompts.gpt4_prompt import create_NIH_prompts, create_RSNA_prompts, create_CELEBA_prompts, \
     create_Waterbirds_prompts, create_Metashift_prompts
@@ -640,7 +641,7 @@ def validate_error_slices_via_sent(
             clip_model, prediction_col, dataset_type="medical", mode=mode, class_label=class_label, percentile=55,
             out_file=out_file, azure_params=azure_params
         )
-    elif dataset.lower() == "rsna" or dataset.lower() == "embed" or dataset.lower() == "vindr":
+    elif is_mammo_dataset(dataset):
         prompt = create_RSNA_prompts(content)
         validate_error_slices_via_LLM(
             LLM, key, save_path, clf_results_csv, clf_image_emb_path, aligner_path, prompt,

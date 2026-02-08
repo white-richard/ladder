@@ -10,6 +10,7 @@ import pandas as pd
 import torch
 from tqdm import tqdm
 
+from mammo_metrics import is_mammo_dataset
 from model_factory import create_clip
 # from prompts.prompt import create_waterbirds_prompts, create_rsna_mammo_prompts, create_celebA_prompts, \
 #     create_metashift_prompts, create_cheXpert_NoFinding_prompts
@@ -24,7 +25,6 @@ import os
 torch.backends.cudnn.benchmark = True
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
-
 
 def config():
     parser = argparse.ArgumentParser(description="Generate and save text embeddings using CLIP or MedCLIP.")
@@ -458,7 +458,7 @@ def save_emb(clip_model, args):
     ):
         save_vision_text_emb(clip_model, args.device, args.save_path, args.prompt_csv, args.captioning_type)
 
-    elif args.dataset.lower() == "rsna" or args.dataset.lower() == "vindr":
+    elif is_mammo_dataset(args.dataset):
         save_rsna_text_emb(clip_model, args)
 
     elif args.dataset.lower() == "nih" and clip_model["type"] == "cxr_clip":
