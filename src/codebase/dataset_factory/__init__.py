@@ -66,8 +66,10 @@ def _load_cbis_manifest(data_dir, args):
     candidates.extend(
         [
             data_dir / "processed_png_full" / "manifest_full_mammograms.csv",
+            data_dir / "metadata" / "manifest_full_mammograms.csv",
             data_dir / "manifest_full_mammograms.csv",
             data_dir / "metadata.csv",
+            data_dir / "metadata" / "metadata.csv",
         ]
     )
     manifest_path = _pick_existing_file(candidates)
