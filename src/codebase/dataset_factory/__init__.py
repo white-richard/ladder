@@ -201,21 +201,14 @@ def get_rsna_dataloaders(args):
         valid_df = df[df['fold'] == 3].reset_index(drop=True)
         test_df = df[df['fold'] == 0].reset_index(drop=True)
         label_col = "cancer"
-    elif mammo_dataset == "vindr":
-        df = pd.read_csv(data_dir / "vindr_detection_v1_folds_abnormal.csv")
-        mapping = {'L': 0, 'R': 1}
-        df['laterality'] = df['laterality'].map(mapping)
-        train_df = df[df["split_new"] == "train"].reset_index(drop=True)
-        valid_df = df[df["split_new"] == "val"].reset_index(drop=True)
-        test_df = df[df["split_new"] == "test"].reset_index(drop=True)
-        vindr_label_mode = getattr(args, "vindr_label_mode", "abnormal")
-
-        vindr_abnormal_birads_min = getattr(args, "vindr_abnormal_birads_min", 4)
-        if vindr_label_mode == "abnormal" and vindr_abnormal_birads_min is not None:
-            for _df in (train_df, valid_df, test_df):
-                _df["breast_birads_num"] = pd.to_numeric(_df["breast_birads"], errors="coerce")
-                _df["abnormal"] = (_df["breast_birads_num"] >= vindr_abnormal_birads_min).astype(int)
-        label_col = "abnormal"
+    elif args.dataset.lower() == "vindr":
+            df = pd.read_csv(data_dir / "vindr_detection_v1_folds_abnormal.csv")
+            mapping = {'L': 0, 'R': 1}
+            df['laterality'] = df['laterality'].map(mapping)
+            train_df = df[df["split_new"] == "train"].reset_index(drop=True)
+            valid_df = df[df["split_new"] == "val"].reset_index(drop=True)
+            test_df = df[df["split_new"] == "test"].reset_index(drop=True)
+            label_col = "abnormal"
     elif mammo_dataset == "cbis":
         df, label_col = _load_cbis_manifest(data_dir, args)
         train_df, valid_df, test_df = _build_cbis_splits(
