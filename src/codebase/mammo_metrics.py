@@ -1,6 +1,4 @@
-import numpy as np
 import pandas as pd
-from sklearn.metrics import roc_auc_score
 
 
 def normalize_mammo_dataset_name(dataset):
@@ -10,19 +8,6 @@ def normalize_mammo_dataset_name(dataset):
 
 def is_mammo_dataset(dataset):
     return normalize_mammo_dataset_name(dataset) in {"rsna", "vindr", "cbis", "embed"}
-
-
-def safe_binary_auroc(y_true, y_score):
-    y_true = np.asarray(y_true).reshape(-1)
-    y_score = np.asarray(y_score).reshape(-1)
-
-    unique_true = np.unique(y_true)
-    if not np.isin(unique_true, [0, 1]).all():
-        y_true = (y_true >= 0.5).astype(int)
-
-    if np.unique(y_true).shape[0] < 2:
-        return float("nan")
-    return roc_auc_score(y_true, y_score)
 
 
 def aggregate_mammo_predictions(
