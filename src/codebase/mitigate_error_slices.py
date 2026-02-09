@@ -340,6 +340,14 @@ def mitigate_error_slices_rsna(args):
     tr_df = pd.read_csv(args.clf_results_csv.format(args.seed, "valid"))
     va_df = pd.read_csv(args.clf_results_csv.format(args.seed, "test"))
 
+    print("------------------------------------------------------------------------------------------------------")
+    print("############################# Overall dataset performance before mitigation: #############################")
+    print("############################### Ground truth slices ########################################")
+    calculate_worst_group_acc_med_img(
+        va_df.copy(), pos_pred_col="out_put_predict", neg_pred_col="out_put_predict", attribute_col="calc",
+        log_file=args.out_file, disease="Cancer")
+    print("------------------------------------------------------------------------------------------------------")
+
     args.slice_names = Path(args.slice_names.format(args.seed))
     args.input_shape = get_input_shape(args.dataset)
     criterion = torch.nn.BCEWithLogitsLoss(reduction='mean')
@@ -399,39 +407,6 @@ def mitigate_error_slices_rsna(args):
         disease="Cancer")
     print("------------------------------------------------------------------------------------------------------")
 
-    # Overall dataset performance BEFORE mitigation (initial model)
-    if "out_put_GT" in test_df.columns:
-        init_proba = None
-        init_pred_bin = None
-
-        if "out_put_predict" in test_df.columns:
-            init_proba = test_df["out_put_predict"].values
-        elif "Predictions_proba" in test_df.columns:
-            init_proba = test_df["Predictions_proba"].values
-
-        if "Predictions_bin" in test_df.columns:
-            init_pred_bin = test_df["Predictions_bin"].values
-        elif "out_put_predict_bin" in test_df.columns:
-            init_pred_bin = test_df["out_put_predict_bin"].values
-        elif init_proba is not None:
-            init_pred_bin = (init_proba >= 0.5).astype(int)
-
-        if init_pred_bin is not None:
-            init_acc = (init_pred_bin == test_df["out_put_GT"].values).mean()
-            print(f"Overall ACC for the whole dataset (Initial model): {init_acc}")
-
-        if init_proba is not None:
-            init_auc = auroc(test_df["out_put_GT"].values, init_proba)
-            print(f"Overall AUC-ROC for the whole dataset (Initial model): {init_auc}")
-
-    # Overall dataset performance AFTER mitigation (ensemble model)
-    mit_proba = test_df[pos_pred_col].values if pos_pred_col in test_df.columns else None
-    if mit_proba is not None:
-        mit_pred_bin = (mit_proba >= 0.5).astype(int)
-        mit_acc = (mit_pred_bin == test_df["out_put_GT"].values).mean()
-        mit_auc = auroc(test_df["out_put_GT"].values, mit_proba)
-        print(f"Overall ACC for the whole dataset (Mitigated model): {mit_acc}")
-        print(f"Overall AUC-ROC for the whole dataset (Mitigated model): {mit_auc}")
 
     print(test_df.columns)
     test_df.to_csv(args.save_path / final_csv_name, index=False)
@@ -446,6 +421,14 @@ def mitigate_error_slices_nih(args):
     """
     tr_df = pd.read_csv(args.clf_results_csv.format(args.seed, "valid"))
     va_df = pd.read_csv(args.clf_results_csv.format(args.seed, "test"))
+
+    print("------------------------------------------------------------------------------------------------------")
+    print("############################# Overall dataset performance before mitigation: #############################")
+    print("############################### Ground truth slices ########################################")
+    calculate_worst_group_acc_med_img(
+        va_df.copy(), pos_pred_col="out_put_predict", neg_pred_col="out_put_predict", attribute_col="tube",
+        log_file=args.out_file, disease="Pneumothorax")
+    print("------------------------------------------------------------------------------------------------------")
 
     args.slice_names = Path(args.slice_names.format(args.seed))
     args.input_shape = get_input_shape(args.dataset)
