@@ -12,9 +12,10 @@ from dataset_factory import create_dataloaders
 from metrics_factory import eval_metrics_vision, pfbeta_binarized, pr_auc, auroc, compute_auprc, \
     compute_accuracy_np_array
 from metrics_factory.calculate_worst_group_acc import calculate_performance_metrics_urbancars_df
-from mammo_metrics import aggregate_mammo_predictions, is_mammo_dataset, safe_binary_auroc
+from mammo_metrics import aggregate_mammo_predictions, is_mammo_dataset
 from model_factory import create_classifier, create_clip
 from utils import seed_all, get_input_shape
+from metrics import auroc
 
 warnings.filterwarnings("ignore")
 import argparse
@@ -138,7 +139,7 @@ def compute_performance_metrics(dataset, additional_info, save_path, mode):
         np_gt = oof_df_agg["out_put_GT"].values
         np_preds = oof_df_agg["out_put_predict"].values
 
-        aucroc = safe_binary_auroc(np_gt, np_preds)
+        aucroc = auroc(np_gt, np_preds)
 
         mask = np_gt == 1
         np_gt_cancer = np_gt[mask]

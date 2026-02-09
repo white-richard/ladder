@@ -17,8 +17,8 @@ from transformers import get_cosine_schedule_with_warmup
 from Classifiers.models.Efficient_net_custom import EfficientNet
 
 from med_img_datasets_clf.dataset_utils import get_dataloader_mammo
-from mammo_metrics import aggregate_mammo_predictions, normalize_mammo_dataset_name, safe_binary_auroc
-
+from mammo_metrics import aggregate_mammo_predictions, normalize_mammo_dataset_name
+from metrics import auroc
 
 def compute_accuracy_np_array(gt, pred):
     return np.mean(gt == pred)
@@ -296,7 +296,7 @@ def do_experiments(args, device):
     )
 
     print('================ CV ================')
-    aucroc = safe_binary_auroc(y_true=oof_df_agg[args.label].values, y_score=oof_df_agg['prediction'].values)
+    aucroc = auroc(y_true=oof_df_agg[args.label].values, y_score=oof_df_agg['prediction'].values)
     oof_df_agg['prediction'] = oof_df_agg['prediction'].apply(lambda x: 1 if x >= 0.5 else 0)
 
     oof_df_agg_cancer = oof_df_agg[oof_df_agg[args.label] == 1]
@@ -369,7 +369,7 @@ def train_loop(args, device):
                 label_col=args.label,
             )
 
-        aucroc = safe_binary_auroc(valid_agg[args.label].values, valid_agg['prediction'].values)
+        aucroc = auroc(valid_agg[args.label].values, valid_agg['prediction'].values)
         valid_agg_cancer = valid_agg[valid_agg[args.label] == 1]
         valid_agg_cancer = valid_agg_cancer.copy()
         valid_agg_cancer['prediction'] = valid_agg_cancer['prediction'].apply(lambda x: 1 if x >= 0.5 else 0)
