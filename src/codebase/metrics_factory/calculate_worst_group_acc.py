@@ -251,11 +251,13 @@ def calculate_worst_group_acc_celebA(df, pos_pred_col, neg_pred_col, attribute_c
 
 def calculate_worst_group_acc_rsna_mammo(df, pred_col, attribute_col="calc"):
     df["out_put_predict_bin"] = (df["out_put_predict"] >= 0.5).astype(int)
-    aucroc = auroc(gt=df["out_put_GT"].values, pred=df["out_put_predict"].values)
-    print("Overall AUC-ROC for the whole dataset (Initial model): ", aucroc)
+    aucroc_initial = auroc(gt=df["out_put_GT"].values, pred=df["out_put_predict"].values)
+    print("Overall AUC-ROC for the whole dataset (Initial model): ", aucroc_initial)
+    aucroc_current = None
     if f"{pred_col}_proba" in df.columns:
-        aucroc = auroc(gt=df["out_put_GT"].values, pred=df[f"{pred_col}_proba"].values)
-        print("Overall AUC-ROC for the whole dataset (Cur model): ", aucroc)
+        aucroc_current = auroc(gt=df["out_put_GT"].values, pred=df[f"{pred_col}_proba"].values)
+        print("Overall AUC-ROC for the whole dataset (Cur model): ", aucroc_current)
+    
     print(f"df: {df.shape}")
 
     if "_bin" not in pred_col:
@@ -279,9 +281,18 @@ def calculate_worst_group_acc_rsna_mammo(df, pred_col, attribute_col="calc"):
     print(f"acc Cancer with {attribute_col}: {acc_cancer_attr}")
     print(f"acc Cancer without {attribute_col}: {acc_cancer_wo_attr}")
 
-    print(f"Mean accuracy: {df[df[pred_col] == df['out_put_GT']].shape[0] / df.shape[0]}")
+    mean_accuracy = df[df[pred_col] == df['out_put_GT']].shape[0] / df.shape[0]
+    print(f"Mean accuracy: {mean_accuracy}")
 
-    return acc_cancer_wo_attr
+    return {
+        "aucroc_initial": aucroc_initial,
+        "aucroc_current": aucroc_current,
+        "acc_cancer_with_attr": acc_cancer_attr,
+        "acc_cancer_without_attr": acc_cancer_wo_attr,
+        "mean_accuracy": mean_accuracy,
+        "worst_group_acc": acc_cancer_wo_attr,
+        "attribute_col": attribute_col,
+    }
 
 
 def calculate_worst_group_acc_med_img(
@@ -322,11 +333,11 @@ def calculate_worst_group_acc_med_img(
     tot_gt = np.concatenate((gt_with_tube, gt_without_tube, gt_negatives), axis=0)
     tot_pred = np.concatenate((pred_with_tube, pred_without_tube, pred_negatives), axis=0)
 
-    auroc = roc_auc_score(tot_gt, tot_pred)
+    auroc_overall = roc_auc_score(tot_gt, tot_pred)
     auroc_with_tube = roc_auc_score(tot_gt_with_tube, tot_pred_with_tube)
     auroc_without_tube = roc_auc_score(tot_gt_without_tube, tot_pred_without_tube)
 
-    print("AUROC for overall:", auroc)
+    print("AUROC for overall:", auroc_overall)
     print(f"AUROC for positives disease with {attribute_col} vs all negatives:", auroc_with_tube)
     print(f"AUROC for positives disease without {attribute_col} vs all negatives:", auroc_without_tube)
 
@@ -337,11 +348,21 @@ def calculate_worst_group_acc_med_img(
                   file=f)
             print(f"Accuracy for {disease} overall patients: {accuracy_overall}", file=f)
             print("\n", file=f)
-            print(f"AUROC for overall (Mean):", auroc, file=f)
+            print(f"AUROC for overall (Mean):", auroc_overall, file=f)
             print(f"AUROC for positive disease with  {attribute_col} vs all negatives: {auroc_with_tube}", file=f)
             print(f"AUROC for positive disease without  {attribute_col} vs all negatives: {auroc_without_tube}", file=f)
 
-    return accuracy_without_tube
+            return {
+            "accuracy_with_attr": accuracy_with_tube,
+            "accuracy_without_attr": accuracy_without_tube,
+            "accuracy_overall": accuracy_overall,
+            "auroc_overall": auroc_overall,
+            "auroc_with_attr": auroc_with_tube,
+            "auroc_without_attr": auroc_without_tube,
+            "worst_group_acc": accuracy_without_tube,
+            "attribute_col": attribute_col,
+            "disease": disease,
+            }
 
 
 def calculate_worst_group_acc_chexpert_no_findings(df, pred_col, attribute_col="attribute"):

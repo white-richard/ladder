@@ -25,6 +25,106 @@ torch.backends.cudnn.benchmark = True
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
 
+
+def _format_metric_value(value):
+    if value is None:
+        return "n/a"
+    if isinstance(value, (float, np.floating)):
+        return f"{value:.4f}"
+    if isinstance(value, (int, np.integer)):
+        return str(int(value))
+    return str(value)
+
+
+def _render_metrics_table(metrics, title=None):
+    if not metrics:
+        return ["_No metrics available._"]
+    lines = []
+    if title:
+        lines.append(f"**{title}**")
+    lines.extend(["| Metric | Value |", "| --- | --- |"])
+    for key, value in metrics.items():
+        lines.append(f"| {key} | {_format_metric_value(value)} |")
+    return lines
+
+
+def _render_pre_post_metrics_table(pre_metrics, post_metrics):
+    if not pre_metrics and not post_metrics:
+        return ["_No metrics available._"]
+
+    keys = []
+    for metrics in (pre_metrics or {}, post_metrics or {}):
+        for key in metrics.keys():
+            if key not in keys:
+                keys.append(key)
+
+    lines = ["| Metric | Before mitigation | After mitigation |", "| --- | --- | --- |"]
+    for key in keys:
+        pre_value = _format_metric_value((pre_metrics or {}).get(key))
+        post_value = _format_metric_value((post_metrics or {}).get(key))
+        lines.append(f"| {key} | {pre_value} | {post_value} |")
+    return lines
+
+
+def _render_hypothesis_table(per_hypothesis_metrics):
+    if not per_hypothesis_metrics:
+        return ["_No per-hypothesis metrics available._"]
+
+    metric_keys = []
+    for entry in per_hypothesis_metrics:
+        for key in entry["metrics"].keys():
+            if key not in metric_keys:
+                metric_keys.append(key)
+
+    has_pre = any(entry.get("pre_metrics") for entry in per_hypothesis_metrics)
+
+    if has_pre:
+        header = ["Hypothesis"]
+        for key in metric_keys:
+            header.extend([f"{key} (before)", f"{key} (after)"])
+        lines = ["| " + " | ".join(header) + " |", "| " + " | ".join(["---"] * len(header)) + " |"]
+        for entry in per_hypothesis_metrics:
+            row = [entry["hypothesis"]]
+            pre_metrics = entry.get("pre_metrics", {})
+            post_metrics = entry.get("metrics", {})
+            for key in metric_keys:
+                row.append(_format_metric_value(pre_metrics.get(key)))
+                row.append(_format_metric_value(post_metrics.get(key)))
+            lines.append("| " + " | ".join(row) + " |")
+        return lines
+
+    header = ["Hypothesis"] + metric_keys
+    lines = ["| " + " | ".join(header) + " |", "| " + " | ".join(["---"] * len(header)) + " |"]
+    for entry in per_hypothesis_metrics:
+        row = [entry["hypothesis"]]
+        for key in metric_keys:
+            row.append(_format_metric_value(entry["metrics"].get(key)))
+        lines.append("| " + " | ".join(row) + " |")
+    return lines
+
+
+def _write_mitigation_report(report_path, dataset, per_hypothesis_metrics, overall_metrics, pre_metrics=None):
+    lines = ["# Mitigation Report", "", f"- Dataset: {dataset}", ""]
+
+    lines.append("## Overall performance summary")
+    lines.extend(_render_pre_post_metrics_table(pre_metrics, overall_metrics))
+    lines.append("")
+
+    if pre_metrics:
+        lines.append("## Before mitigation (overall)")
+        lines.extend(_render_metrics_table(pre_metrics))
+        lines.append("")
+
+    lines.append("## After mitigation (overall)")
+    lines.extend(_render_metrics_table(overall_metrics))
+    lines.append("")
+
+    lines.append("## Per-hypothesis performance")
+    lines.extend(_render_hypothesis_table(per_hypothesis_metrics))
+    lines.append("")
+
+    report_path.write_text("\n".join(lines))
+
 def last_layer_retrain(
         model, epochs, train_data_loader, test_data_loader, criterion, optimizer, device,
         model_name, batch_size=32, loss_type="BCE"):
@@ -343,10 +443,13 @@ def mitigate_error_slices_rsna(args):
     print("------------------------------------------------------------------------------------------------------")
     print("############################# Overall dataset performance before mitigation: #############################")
     print("############################### Ground truth slices ########################################")
-    calculate_worst_group_acc_med_img(
+    pre_metrics = calculate_worst_group_acc_med_img(
         va_df.copy(), pos_pred_col="out_put_predict", neg_pred_col="out_put_predict", attribute_col="calc",
         log_file=args.out_file, disease="Cancer")
     print("------------------------------------------------------------------------------------------------------")
+
+    baseline_hyp_metrics = calculate_worst_group_acc_rsna_mammo(
+        va_df.copy(), pred_col="out_put_predict", attribute_col="calc")
 
     args.slice_names = Path(args.slice_names.format(args.seed))
     args.input_shape = get_input_shape(args.dataset)
@@ -358,6 +461,8 @@ def mitigate_error_slices_rsna(args):
     col_name = []
     for col in col_name_list:
         col_name.append([col, col])
+
+    per_hypothesis_metrics = []
 
     for idx, col in enumerate(col_name, start=1):
         print(f"\n  ==================================== Hypothesis {idx}: {col} ====================================")
@@ -377,9 +482,14 @@ def mitigate_error_slices_rsna(args):
         test_df.loc[:, f"{hyp_name}_Predictions_proba"] = proba
 
         print(test_df)
-        acc_worst_group = calculate_worst_group_acc_rsna_mammo(
+        metrics = calculate_worst_group_acc_rsna_mammo(
             test_df, pred_col=f"{hyp_name}_Predictions", attribute_col="calc")
-        print(f"Avg. accuracy worst group: {acc_worst_group}")
+        per_hypothesis_metrics.append({
+            "hypothesis": hyp_name,
+            "pre_metrics": baseline_hyp_metrics,
+            "metrics": metrics
+        })
+        print(f"Avg. accuracy worst group: {metrics['worst_group_acc']}")
         print(f"==================================== Hypothesis: {col} ==================================== \n")
 
     print("\n")
@@ -402,7 +512,7 @@ def mitigate_error_slices_rsna(args):
     print("------------------------------------------------------------------------------------------------------")
     print(f"############################# Overall dataset performance after mitigation: #############################")
     print("############################### Ground truth slices ########################################")
-    calculate_worst_group_acc_med_img(
+    overall_metrics = calculate_worst_group_acc_med_img(
         test_df, pos_pred_col=pos_pred_col, neg_pred_col=neg_pred_col, attribute_col="calc", log_file=args.out_file,
         disease="Cancer")
     print("------------------------------------------------------------------------------------------------------")
@@ -410,6 +520,13 @@ def mitigate_error_slices_rsna(args):
 
     print(test_df.columns)
     test_df.to_csv(args.save_path / final_csv_name, index=False)
+    _write_mitigation_report(
+        args.save_path / "mitigation_report.md",
+        args.dataset,
+        per_hypothesis_metrics,
+        overall_metrics,
+        pre_metrics=pre_metrics
+    )
 
 
 def mitigate_error_slices_nih(args):
