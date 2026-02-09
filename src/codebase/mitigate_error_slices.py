@@ -8,7 +8,8 @@ import torch
 from torch.utils.data import TensorDataset, DataLoader
 from tqdm import tqdm
 
-from mammo_metrics import is_mammo_dataset, safe_binary_auroc
+from mammo_metrics import is_mammo_dataset 
+from metrics import auroc
 from metrics_factory.calculate_worst_group_acc import calculate_worst_group_acc_waterbirds, \
     calculate_worst_group_acc_rsna_mammo, calculate_worst_group_acc_celebA, calculate_worst_group_acc_med_img, \
     calculate_worst_group_acc_metashift
@@ -103,7 +104,7 @@ def last_layer_retrain(
         proba = np.concatenate(proba_list)
         np_gt = gt
         np_preds = proba
-        aucroc = safe_binary_auroc(np_gt, np_preds)
+        aucroc = auroc(np_gt, np_preds)
 
         print("==================================== Overall Metrics =====================================")
         print(f"aucroc: {aucroc}")
@@ -151,6 +152,7 @@ def generate_ds_last_layer_retrain(
     print(no_pt_df.shape)
     no_pt_sorted_df = no_pt_df.sort_values(by=col_name_0, ascending=False)
     no_pt_top = no_pt_sorted_df.head(n_samples)
+    # BUG was pt_sorted_df and not no_pt_sorted_df
     no_pt_bottom = pt_sorted_df.tail(n_samples)
     bal_df = pd.concat([pt_top, pt_bottom, no_pt_top, no_pt_bottom], axis=0)
     print(bal_df.shape)
@@ -326,7 +328,6 @@ def mitigate_error_slices_celebA(args):
     print("\n")
     print(args.save_path / final_csv_name)
     test_df.to_csv(args.save_path / final_csv_name, index=False)
-    test_df.to_csv(args.save_path / final_csv_name, index=False)
 
 
 def mitigate_error_slices_rsna(args):
@@ -350,8 +351,8 @@ def mitigate_error_slices_rsna(args):
     for col in col_name_list:
         col_name.append([col, col])
 
-    for col in col_name:
-        print(f"\n  ==================================== Hypothesis: {col} ====================================")
+    for idx, col in enumerate(col_name, start=1):
+        print(f"\n  ==================================== Hypothesis {idx}: {col} ====================================")
         test_df, train_data_loader, test_data_loader = generate_ds_last_layer_retrain(
             tr_df, va_df, args.clf_image_emb_path, args.batch_size, args.seed, n_samples=args.n,
             col_name_0=col[0], col_name_1=col[1])
@@ -397,6 +398,40 @@ def mitigate_error_slices_rsna(args):
         test_df, pos_pred_col=pos_pred_col, neg_pred_col=neg_pred_col, attribute_col="calc", log_file=args.out_file,
         disease="Cancer")
     print("------------------------------------------------------------------------------------------------------")
+
+    # Overall dataset performance BEFORE mitigation (initial model)
+    if "out_put_GT" in test_df.columns:
+        init_proba = None
+        init_pred_bin = None
+
+        if "out_put_predict" in test_df.columns:
+            init_proba = test_df["out_put_predict"].values
+        elif "Predictions_proba" in test_df.columns:
+            init_proba = test_df["Predictions_proba"].values
+
+        if "Predictions_bin" in test_df.columns:
+            init_pred_bin = test_df["Predictions_bin"].values
+        elif "out_put_predict_bin" in test_df.columns:
+            init_pred_bin = test_df["out_put_predict_bin"].values
+        elif init_proba is not None:
+            init_pred_bin = (init_proba >= 0.5).astype(int)
+
+        if init_pred_bin is not None:
+            init_acc = (init_pred_bin == test_df["out_put_GT"].values).mean()
+            print(f"Overall ACC for the whole dataset (Initial model): {init_acc}")
+
+        if init_proba is not None:
+            init_auc = auroc(test_df["out_put_GT"].values, init_proba)
+            print(f"Overall AUC-ROC for the whole dataset (Initial model): {init_auc}")
+
+    # Overall dataset performance AFTER mitigation (ensemble model)
+    mit_proba = test_df[pos_pred_col].values if pos_pred_col in test_df.columns else None
+    if mit_proba is not None:
+        mit_pred_bin = (mit_proba >= 0.5).astype(int)
+        mit_acc = (mit_pred_bin == test_df["out_put_GT"].values).mean()
+        mit_auc = auroc(test_df["out_put_GT"].values, mit_proba)
+        print(f"Overall ACC for the whole dataset (Mitigated model): {mit_acc}")
+        print(f"Overall AUC-ROC for the whole dataset (Mitigated model): {mit_auc}")
 
     print(test_df.columns)
     test_df.to_csv(args.save_path / final_csv_name, index=False)
@@ -499,27 +534,22 @@ def config():
     parser.add_argument(
         "--classifier_check_pt", metavar="DIR",
         default="./Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/model.pkl",
-        help="Path template to load the classifier checkpoint file."
-    )
+        help="Path template to load the classifier checkpoint file.")
     parser.add_argument(
         "--save_path", metavar="DIR",
         default="./Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/clip_img_encoder_ViT-B/32",
-        help="Directory to save trained models, predictions, and final results."
-    )
+        help="Directory to save trained models, predictions, and final results.")
     parser.add_argument(
         "--clf_results_csv", metavar="DIR",
         default="./Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/clip_img_encoder_ViT-B/32/test_dataframe_mitigation.csv",
-        help="Path to CSV containing classifier predictions and ground truth."
-    )
+        help="Path to CSV containing classifier predictions and ground truth.")
     parser.add_argument(
         "--clf_image_emb_path", metavar="DIR",
         default="./Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/clip_img_encoder_ViT-B/32/test_classifier_embeddings.npy",
-        help="Path to classifier-generated image embeddings (.npy), with format placeholders for seed and split."
-    )
+        help="Path to classifier-generated image embeddings (.npy), with format placeholders for seed and split.")
     parser.add_argument(
         "--mode", default="last_layer_retrain",
-        help="last_layer_retrain with validation set (in Kirichenko et al., 2021)"
-    )
+        help="last_layer_retrain with validation set (in Kirichenko et al., 2021)")
     parser.add_argument(
         '--default hypothesis', type=str, nargs='+',
         help='A list of hypothesis, each optionally containing spaces and underscores')
