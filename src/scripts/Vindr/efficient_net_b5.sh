@@ -16,7 +16,7 @@ python ./src/codebase/train_classifier_Mammo.py \
   --classifier_check_pt="out/ViNDr/fold{}/efficientnetb5_seed_10_fold0_best_aucroc_ver084.pth" \
   --flattening-type="adaptive" \
   --clip_vision_encoder="tf_efficientnet_b5_ns-detect" \
-  --clip_check_pt "/home/richw/.code/hyp-mammo/repos/ladder/model_weights/mammoClip-b5-model-best-epoch-7.tar" \
+  --clip_check_pt "model_weights/mammoClip-b5-model-best-epoch-7.tar" \
   --data_dir="data/Vindr/vindr-mammo-a-large-scale-benchmark-dataset-for-computer-aided-detection-and-diagnosis-in-full-field-digital-mammography-1.0.0" \
   --save_path="out/ViNDr/fold{}" \
   --tokenizers="$HOME/.cache/huggingface/tokenizers" \
@@ -26,8 +26,8 @@ python ./src/codebase/train_classifier_Mammo.py \
   --seed=0 \
   --dataset="VinDr" \
   --clip_vision_encoder="tf_efficientnet_b5_ns-detect" \
-  --clip_check_pt="/home/richw/.code/hyp-mammo/repos/ladder/model_weights/mammoClip-b5-model-best-epoch-7.tar" \
-  --csv="/home/richw/.code/hyp-mammo/repos/ladder/mammo_rad_report.csv" \
+  --clip_check_pt="model_weights/mammoClip-b5-model-best-epoch-7.tar" \
+  --csv="mammo_rad_report.csv" \
   --save_path="out/ViNDr/fold{}" \
   --tokenizers="$HOME/.cache/huggingface/tokenizers" \
   --cache_dir="$HOME/.cache/huggingface/models" \
@@ -57,7 +57,7 @@ python ./src/codebase/train_classifier_Mammo.py \
   --class_label="abnormal" \
   --clip_vision_encoder="tf_efficientnet_b5_ns-detect" \
   --key="" \
-  --clip_check_pt="/home/richw/.code/hyp-mammo/repos/ladder/model_weights/mammoClip-b5-model-best-epoch-7.tar" \
+  --clip_check_pt="model_weights/mammoClip-b5-model-best-epoch-7.tar" \
   --top50-err-text="out/ViNDr/fold{}/clip_img_encoder_tf_efficientnet_b5_ns-detect/abnormal_error_top_100_sent_diff_emb.txt" \
   --save_path="out/ViNDr/fold{}/clip_img_encoder_tf_efficientnet_b5_ns-detect" \
   --clf_results_csv="out/ViNDr/fold{}/clip_img_encoder_tf_efficientnet_b5_ns-detect/{}_additional_info.csv" \
