@@ -1,6 +1,7 @@
 *.pyc
 data/
 *.lock
+out_original/
 *.safetensors
 out_api/
 *.zip
