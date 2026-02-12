@@ -79,6 +79,38 @@ def _load_slice_attributes(slice_names_path: Optional[str]) -> List[str]:
     return list(attrs.keys())
 
 
+def _find_slice_attribute_df(
+    base_csv_path: str, slice_attributes: List[str]
+) -> Optional[pd.DataFrame]:
+    if not slice_attributes:
+        return None
+    base_dir = Path(base_csv_path).parent
+    candidates = []
+    candidates.extend(sorted(base_dir.glob("*dataframe_mitigation.csv")))
+    final_mitigation = base_dir / "final_mitigation.csv"
+    if final_mitigation.exists():
+        candidates.append(final_mitigation)
+    for candidate in candidates:
+        try:
+            columns = pd.read_csv(candidate, nrows=1).columns
+        except Exception:
+            continue
+        if any(attr in columns for attr in slice_attributes):
+            return pd.read_csv(candidate)
+    return None
+
+
+def _resolve_attribute_column(df: pd.DataFrame, attribute: str) -> Optional[str]:
+    if attribute in df.columns and attribute.endswith("_bin"):
+        return attribute
+    bin_col = f"{attribute}_bin"
+    if bin_col in df.columns:
+        return bin_col
+    if attribute in df.columns:
+        return attribute
+    return None
+
+
 def _mean_consistent_wga_aucroc(
     df: pd.DataFrame,
     slice_attributes: List[str],
@@ -87,8 +119,14 @@ def _mean_consistent_wga_aucroc(
 ) -> float:
     if not slice_attributes:
         return float("nan")
-    available_attributes = [attr for attr in slice_attributes if attr in df.columns]
-    missing_attributes = [attr for attr in slice_attributes if attr not in df.columns]
+    available_attributes = []
+    missing_attributes = []
+    for attr in slice_attributes:
+        resolved = _resolve_attribute_column(df, attr)
+        if resolved:
+            available_attributes.append(resolved)
+        else:
+            missing_attributes.append(attr)
     if verbose and missing_attributes:
         print(
             "Skipping missing slice attributes (not in CSV columns): "
@@ -101,8 +139,36 @@ def _mean_consistent_wga_aucroc(
         metrics = calculate_rsna_consistent_aucroc(
             df, score_col=score_col, attribute_col=attribute
         )
-        wga_values.append(metrics["consistent_wga_auroc"])
+        value = metrics["consistent_wga_auroc"]
+        if np.isfinite(value):
+            wga_values.append(value)
+    if not wga_values:
+        return float("nan")
     return float(np.mean(wga_values))
+
+
+def _consistent_wga_aucroc_per_slice(
+    df: pd.DataFrame,
+    slice_attributes: List[str],
+    score_col: str,
+) -> List[dict]:
+    results = []
+    for attribute in slice_attributes:
+        resolved_attribute = _resolve_attribute_column(df, attribute)
+        if not resolved_attribute:
+            continue
+        metrics = calculate_rsna_consistent_aucroc(
+            df, score_col=score_col, attribute_col=resolved_attribute
+        )
+        results.append(
+            {
+                "attribute": attribute,
+                "attribute_col": resolved_attribute,
+                "consistent_mean_auroc": metrics["consistent_mean_auroc"],
+                "consistent_wga_auroc": metrics["consistent_wga_auroc"],
+            }
+        )
+    return results
 
 
 def evaluate(args):
@@ -143,16 +209,37 @@ def evaluate(args):
             slice_attributes = _load_slice_attributes(args.slice_names)
             if attribute_col not in slice_attributes:
                 slice_attributes = [attribute_col] + slice_attributes
+            per_slice_df = df
+            if any(attr not in per_slice_df.columns for attr in slice_attributes):
+                alt_df = _find_slice_attribute_df(csv_path, slice_attributes)
+                if alt_df is not None:
+                    per_slice_df = alt_df
+                    print(
+                        "Using mitigation CSV for slice metrics: "
+                        f"{Path(csv_path).parent}"
+                    )
+            per_slice_score_col = pred_col
+            if per_slice_score_col not in per_slice_df.columns and "out_put_predict" in per_slice_df.columns:
+                per_slice_score_col = "out_put_predict"
             mean_consistent_wga = _mean_consistent_wga_aucroc(
-                df, slice_attributes, score_col=pred_col
+                per_slice_df, slice_attributes, score_col=per_slice_score_col
+            )
+            per_slice_consistent = _consistent_wga_aucroc_per_slice(
+                per_slice_df, slice_attributes, score_col=per_slice_score_col
             )
             print("#################################### Slice-Mean Consistent WGA AUROC ####################################")
             print(f"Mean Consistent WGA AUROC: {mean_consistent_wga}")
+            print("#################################### Per-Slice Consistent WGA AUROC ####################################")
+            for entry in per_slice_consistent:
+                print(
+                    f"{entry['attribute']}: {entry['consistent_wga_auroc']}"
+                )
             return {
                 "standard": standard_metrics,
                 "wga": wga,
                 "consistent_aucroc": consistent_metrics,
                 "mean_slice_consistent_wga": mean_consistent_wga,
+                "per_slice_consistent_aucroc": per_slice_consistent,
             }
         return {"standard": standard_metrics, "wga": wga, "consistent_aucroc": consistent_metrics}
 
