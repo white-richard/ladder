@@ -295,6 +295,36 @@ def calculate_worst_group_acc_rsna_mammo(df, pred_col, attribute_col="calc"):
     }
 
 
+def calculate_rsna_consistent_aucroc(df, score_col, attribute_col="calc"):
+    if score_col not in df.columns:
+        raise ValueError(f"Score column '{score_col}' not found in dataframe.")
+    if "out_put_GT" not in df.columns:
+        raise ValueError("Required ground-truth column 'out_put_GT' is missing.")
+
+    def _safe_auroc(gt, pred):
+        try:
+            return auroc(gt=gt, pred=pred)
+        except ValueError:
+            return np.nan
+
+    y_true = df["out_put_GT"].to_numpy()
+    y_score = df[score_col].to_numpy()
+    mean_auroc = _safe_auroc(y_true, y_score)
+
+    positives_without_attr = df[(df["out_put_GT"] == 1) & (df[attribute_col] == 0)]
+    negatives = df[df["out_put_GT"] == 0]
+
+    subset = pd.concat([positives_without_attr, negatives], axis=0)
+    wga_auroc = _safe_auroc(subset["out_put_GT"].to_numpy(), subset[score_col].to_numpy())
+
+    return {
+        "consistent_mean_auroc": mean_auroc,
+        "consistent_wga_auroc": wga_auroc,
+        "attribute_col": attribute_col,
+        "score_col": score_col,
+    }
+
+
 def calculate_worst_group_acc_med_img(
         df, pos_pred_col, neg_pred_col, attribute_col, log_file=None, disease="Pneumothorax"):
     print(f"Dataset shape: {df.shape}")

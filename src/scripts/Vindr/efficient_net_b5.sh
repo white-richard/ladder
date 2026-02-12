@@ -77,4 +77,15 @@ python ./src/codebase/train_classifier_Mammo.py \
   --classifier_check_pt="out/ViNDr/fold{}/efficientnetb5_seed_10_fold0_best_aucroc_ver084.pth" \
   --save_path="out/ViNDr/fold{}/clip_img_encoder_tf_efficientnet_b5_ns-detect" \
   --clf_results_csv="out/ViNDr/fold{}/clip_img_encoder_tf_efficientnet_b5_ns-detect/{}_abnormal_dataframe_mitigation.csv" \
-  --clf_image_emb_path="out/ViNDr/fold{}/clip_img_encoder_tf_efficientnet_b5_ns-detect/{}_classifier_embeddings.npy"
+  --clf_image_emb_path="out/ViNDr/fold{}/clip_img_encoder_tf_efficientnet_b5_ns-detect/{}_classifier_embeddings.npy" \
+  && python ./src/codebase/evaluate.py \
+  --seed=0 \
+  --dataset="ViNDr" \
+  --save_path="out/ViNDr/fold{0}" \
+  --clf_results_csv="out/ViNDr/fold0/clip_img_encoder_tf_efficientnet_b5_ns-detect/test_additional_info.csv" \
+  --split="test" \
+  --pred_col="out_put_predict" \
+  --threshold=0.5 \
+  --precision_k 10 \
+  --mean_consistent_wga_slices \
+  --slice_names "out/ViNDr/fold0/clip_img_encoder_tf_efficientnet_b5_ns-detect/abnormal_prompt_dict.pkl"

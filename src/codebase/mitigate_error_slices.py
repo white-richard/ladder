@@ -12,7 +12,7 @@ from mammo_metrics import is_mammo_dataset
 from metrics import auroc
 from metrics_factory.calculate_worst_group_acc import calculate_worst_group_acc_waterbirds, \
     calculate_worst_group_acc_rsna_mammo, calculate_worst_group_acc_celebA, calculate_worst_group_acc_med_img, \
-    calculate_worst_group_acc_metashift
+    calculate_worst_group_acc_metashift, calculate_rsna_consistent_aucroc
 from model_factory import create_classifier
 from utils import seed_all, get_input_shape, AverageMeter
 import torch.nn.functional as F
@@ -446,6 +446,12 @@ def mitigate_error_slices_rsna(args):
     pre_metrics = calculate_worst_group_acc_med_img(
         va_df.copy(), pos_pred_col="out_put_predict", neg_pred_col="out_put_predict", attribute_col="calc",
         log_file=args.out_file, disease="Cancer")
+    pre_consistent_metrics = calculate_rsna_consistent_aucroc(
+        va_df.copy(), score_col="out_put_predict", attribute_col="calc")
+    if pre_metrics is not None:
+        pre_metrics.update(pre_consistent_metrics)
+    print(f"Consistent Mean AUROC (pre): {pre_consistent_metrics['consistent_mean_auroc']}")
+    print(f"Consistent WGA AUROC (pre): {pre_consistent_metrics['consistent_wga_auroc']}")
     print("------------------------------------------------------------------------------------------------------")
 
     baseline_hyp_metrics = calculate_worst_group_acc_rsna_mammo(
@@ -515,6 +521,12 @@ def mitigate_error_slices_rsna(args):
     overall_metrics = calculate_worst_group_acc_med_img(
         test_df, pos_pred_col=pos_pred_col, neg_pred_col=neg_pred_col, attribute_col="calc", log_file=args.out_file,
         disease="Cancer")
+    post_consistent_metrics = calculate_rsna_consistent_aucroc(
+        test_df, score_col=pos_pred_col, attribute_col="calc")
+    if overall_metrics is not None:
+        overall_metrics.update(post_consistent_metrics)
+    print(f"Consistent Mean AUROC (post): {post_consistent_metrics['consistent_mean_auroc']}")
+    print(f"Consistent WGA AUROC (post): {post_consistent_metrics['consistent_wga_auroc']}")
     print("------------------------------------------------------------------------------------------------------")
 
 
