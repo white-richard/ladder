@@ -23,9 +23,6 @@ warnings.filterwarnings("ignore")
 import argparse
 import os
 
-torch.backends.cudnn.benchmark = True
-torch.backends.cuda.matmul.allow_tf32 = True
-torch.backends.cudnn.allow_tf32 = True
 
 def config():
     parser = argparse.ArgumentParser(description="Generate and save text embeddings using CLIP or MedCLIP.")
@@ -114,6 +111,7 @@ def save_vision_text_emb(clip_model, device, save_path, prompt_csv=None, caption
     np.save(save_path / f"sent_emb_captions_{captioning_type}.npy", text_emb_np)
     pickle.dump(sentences, open(save_path / f"sentences_captions_{captioning_type}.pkl", "wb"))
     print(f"Saved prompt sentences embeddings to {save_path}/sent_emb_captions_{captioning_type}.npy")
+
 
 def save_sent_dict_rsna(args, sent_level=True):
     """

@@ -187,5 +187,5 @@ def get_dataloader_mammo(args):
 def get_dataset(args, is_train_mode=True, is_classifier=True, train=True):
     if args.dataset == "NIH" or args.dataset.lower() == "mimic":
         return get_dataloader_CXR(args, is_train_mode=is_train_mode, is_classifier=is_classifier)
-    elif _is_mammo_dataset(args.dataset) and args.model_type.lower() == "classifier":
+    elif args.dataset.lower() == "rsna" and args.model_type.lower() == "classifier":
         return get_dataloader_mammo(args)

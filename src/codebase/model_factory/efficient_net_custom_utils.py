@@ -11,8 +11,6 @@ import math
 import collections
 from functools import partial
 import torch
-import os
-import tempfile
 from torch import nn
 from torch.nn import functional as F
 from torch.utils import model_zoo

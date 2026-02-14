@@ -16,8 +16,10 @@ from transformers import get_cosine_schedule_with_warmup
 
 from Classifiers.models.Efficient_net_custom import EfficientNet
 
+from sklearn.metrics import roc_auc_score
+
 from med_img_datasets_clf.dataset_utils import get_dataloader_mammo
-from mammo_metrics import aggregate_mammo_predictions, normalize_mammo_dataset_name
+from mammo_metrics import normalize_mammo_dataset_name
 from metrics import auroc
 
 def compute_accuracy_np_array(gt, pred):
@@ -214,6 +216,10 @@ class AverageMeter(object):
         self.avg = self.sum / self.count
 
 
+def auroc(gt, pred):
+    return roc_auc_score(gt, pred)
+
+
 def do_experiments(args, device):
     if 'efficientnetv2' in args.arch:
         args.model_base_name = 'efficientv2_s'
@@ -299,10 +305,8 @@ def do_experiments(args, device):
     oof_df = oof_df.reset_index(drop=True)
     oof_df['prediction_bin'] = oof_df['prediction'].apply(lambda x: 1 if x >= 0.5 else 0)
 
-    agg_cols = ['patient_id', 'laterality', args.label, 'prediction']
-    if 'fold' in oof_df.columns:
-        agg_cols.append('fold')
-    oof_df_agg = oof_df[agg_cols].groupby(['patient_id', 'laterality']).mean()
+    oof_df_agg = oof_df[['patient_id', 'laterality', args.label, 'prediction', 'fold']].groupby(
+        ['patient_id', 'laterality']).mean()
 
     print('================ CV ================')
     aucroc = auroc(gt=oof_df_agg[args.label].values, pred=oof_df_agg['prediction'].values)
@@ -366,11 +370,9 @@ def train_loop(args, device):
         dataset_name = normalize_mammo_dataset_name(args.dataset)
         if dataset_name == "vindr":
             valid_agg = args.valid_folds
-        elif dataset_name == "rsna" or dataset_name == "cbis":
-            agg_cols = ['patient_id', 'laterality', args.label, 'prediction']
-            if 'fold' in args.valid_folds.columns:
-                agg_cols.append('fold')
-            valid_agg = args.valid_folds[agg_cols].groupby(['patient_id', 'laterality']).mean()
+        elif dataset_name == "rsna":
+            valid_agg = args.valid_folds[['patient_id', 'laterality', args.label, 'prediction', 'fold']].groupby(
+                ['patient_id', 'laterality']).mean()
 
         aucroc = auroc(valid_agg[args.label].values, valid_agg['prediction'].values)
         valid_agg_cancer = valid_agg[valid_agg[args.label] == 1]

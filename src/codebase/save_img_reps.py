@@ -12,18 +12,13 @@ from dataset_factory import create_dataloaders
 from metrics_factory import eval_metrics_vision, pfbeta_binarized, pr_auc, auroc, compute_auprc, \
     compute_accuracy_np_array
 from metrics_factory.calculate_worst_group_acc import calculate_performance_metrics_urbancars_df
-from mammo_metrics import aggregate_mammo_predictions, is_mammo_dataset
+from mammo_metrics import is_mammo_dataset
 from model_factory import create_classifier, create_clip
 from utils import seed_all, get_input_shape
-from metrics import auroc
 
 warnings.filterwarnings("ignore")
 import argparse
 import os
-
-torch.backends.cudnn.benchmark = True
-torch.backends.cuda.matmul.allow_tf32 = True
-torch.backends.cudnn.allow_tf32 = True
 
 os.environ['TRANSFORMERS_CACHE'] = '.cache/huggingface/transformers'
 os.environ['TORCH_HOME'] = '.cache/torch'

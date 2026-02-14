@@ -17,9 +17,6 @@ warnings.filterwarnings("ignore")
 import argparse
 import os
 
-torch.backends.cudnn.benchmark = True
-torch.backends.cuda.matmul.allow_tf32 = True
-torch.backends.cudnn.allow_tf32 = True
 
 
 def _mammo_positive_label(dataset):

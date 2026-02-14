@@ -407,6 +407,8 @@ class MammoDataset_concept_detection(Dataset):
         )
 
         image = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
+        print(f"DELETE RSNA image path: {path}")
+        exit(0)
         # if self.args.arch.lower() != "clip_b5_upmc" and self.args.arch.lower() != "clip_b5_upmc_rsna":
         image = Image.fromarray(image).convert('RGB')
         image = np.array(image)
