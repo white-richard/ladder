@@ -551,14 +551,6 @@ def mitigate_error_slices_nih(args):
     tr_df = pd.read_csv(args.clf_results_csv.format(args.seed, "valid"))
     va_df = pd.read_csv(args.clf_results_csv.format(args.seed, "test"))
 
-    print("------------------------------------------------------------------------------------------------------")
-    print("############################# Overall dataset performance before mitigation: #############################")
-    print("############################### Ground truth slices ########################################")
-    calculate_worst_group_acc_med_img(
-        va_df.copy(), pos_pred_col="out_put_predict", neg_pred_col="out_put_predict", attribute_col="tube",
-        log_file=args.out_file, disease="Pneumothorax")
-    print("------------------------------------------------------------------------------------------------------")
-
     args.slice_names = Path(args.slice_names.format(args.seed))
     args.input_shape = get_input_shape(args.dataset)
     clf = create_classifier(args, mode=args.mode)

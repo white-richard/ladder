@@ -225,6 +225,7 @@ def do_experiments(args, device):
     args.data_dir = Path(args.data_dir)
 
     dataset_name = normalize_mammo_dataset_name(args.dataset)
+    smoke_test = bool(getattr(args, "smoke_test", False))
     oof_df = pd.DataFrame()
     for fold in range(args.start_fold, args.n_folds):
         args.cur_fold = fold
@@ -284,31 +285,33 @@ def do_experiments(args, device):
                 args.BCE_weights = {}
             args.BCE_weights[f"fold{args.cur_fold}"] = pos_weight
 
+        if smoke_test:
+            print("Smoke test enabled: skipping training and aggregation.")
+            print(f"train_folds shape: {args.train_folds.shape}")
+            print(f"valid_folds shape: {args.valid_folds.shape}")
+            if hasattr(args, "test_folds"):
+                print(f"test_folds shape: {args.test_folds.shape}")
+            return
+
         _oof_df = train_loop(args, device)
         oof_df = pd.concat([oof_df, _oof_df])
 
     oof_df = oof_df.reset_index(drop=True)
     oof_df['prediction_bin'] = oof_df['prediction'].apply(lambda x: 1 if x >= 0.5 else 0)
 
-    oof_df_agg = aggregate_mammo_predictions(
-        oof_df[["patient_id", "laterality", args.label, "prediction", "fold"]],
-        label_col=args.label,
-    )
+    agg_cols = ['patient_id', 'laterality', args.label, 'prediction']
+    if 'fold' in oof_df.columns:
+        agg_cols.append('fold')
+    oof_df_agg = oof_df[agg_cols].groupby(['patient_id', 'laterality']).mean()
 
     print('================ CV ================')
-    aucroc = auroc(y_true=oof_df_agg[args.label].values, y_score=oof_df_agg['prediction'].values)
+    aucroc = auroc(gt=oof_df_agg[args.label].values, pred=oof_df_agg['prediction'].values)
     oof_df_agg['prediction'] = oof_df_agg['prediction'].apply(lambda x: 1 if x >= 0.5 else 0)
 
     oof_df_agg_cancer = oof_df_agg[oof_df_agg[args.label] == 1]
-    oof_df_agg_cancer = oof_df_agg_cancer.copy()
     oof_df_agg_cancer['prediction'] = oof_df_agg_cancer['prediction'].apply(lambda x: 1 if x >= 0.5 else 0)
-    if oof_df_agg_cancer.empty:
-        acc_cancer = float("nan")
-    else:
-        acc_cancer = compute_accuracy_np_array(
-            oof_df_agg_cancer[args.label].values,
-            oof_df_agg_cancer['prediction'].values
-        )
+    acc_cancer = compute_accuracy_np_array(oof_df_agg_cancer[args.label].values,
+                                           oof_df_agg_cancer['prediction'].values)
 
     print(f'AUC-ROC: {aucroc}, acc +ve {args.label} patients: {acc_cancer * 100}')
     print('\n')
@@ -363,23 +366,17 @@ def train_loop(args, device):
         dataset_name = normalize_mammo_dataset_name(args.dataset)
         if dataset_name == "vindr":
             valid_agg = args.valid_folds
-        elif dataset_name in {"rsna", "cbis"}:
-            valid_agg = aggregate_mammo_predictions(
-                args.valid_folds[["patient_id", "laterality", args.label, "prediction", "fold"]],
-                label_col=args.label,
-            )
+        elif dataset_name == "rsna" or dataset_name == "cbis":
+            agg_cols = ['patient_id', 'laterality', args.label, 'prediction']
+            if 'fold' in args.valid_folds.columns:
+                agg_cols.append('fold')
+            valid_agg = args.valid_folds[agg_cols].groupby(['patient_id', 'laterality']).mean()
 
         aucroc = auroc(valid_agg[args.label].values, valid_agg['prediction'].values)
         valid_agg_cancer = valid_agg[valid_agg[args.label] == 1]
-        valid_agg_cancer = valid_agg_cancer.copy()
         valid_agg_cancer['prediction'] = valid_agg_cancer['prediction'].apply(lambda x: 1 if x >= 0.5 else 0)
-        if valid_agg_cancer.empty:
-            acc_cancer = float("nan")
-        else:
-            acc_cancer = compute_accuracy_np_array(
-                valid_agg_cancer[args.label].values,
-                valid_agg_cancer['prediction'].values
-            )
+        acc_cancer = compute_accuracy_np_array(valid_agg_cancer[args.label].values,
+                                                   valid_agg_cancer['prediction'].values)
 
         valid_agg['prediction'] = valid_agg['prediction'].apply(lambda x: 1 if x >= 0.5 else 0)
         elapsed = time.time() - start_time

@@ -131,11 +131,8 @@ def compute_performance_metrics(dataset, additional_info, save_path, mode):
                 additional_info[key] = np.concatenate(value)
 
         df = pd.DataFrame(additional_info)
-        oof_df_agg = aggregate_mammo_predictions(
-            df[['patient_id', 'laterality', "out_put_GT", 'out_put_predict']].copy(),
-            label_col="out_put_GT",
-            prediction_col="out_put_predict",
-        )
+        oof_df_agg = df[['patient_id', 'laterality', "out_put_GT", 'out_put_predict']].groupby(
+            ['patient_id', 'laterality']).mean()
         np_gt = oof_df_agg["out_put_GT"].values
         np_preds = oof_df_agg["out_put_predict"].values
 
@@ -145,10 +142,7 @@ def compute_performance_metrics(dataset, additional_info, save_path, mode):
         np_gt_cancer = np_gt[mask]
         np_preds_cancer = np_preds[mask]
         np_preds_cancer = (np_preds_cancer >= 0.5).astype(int)
-        if np_gt_cancer.size == 0:
-            acc_cancer = float("nan")
-        else:
-            acc_cancer = compute_accuracy_np_array(np_gt_cancer, np_preds_cancer)
+        acc_cancer = compute_accuracy_np_array(np_gt_cancer, np_preds_cancer)
 
         print(f"aucroc: {aucroc} acc_cancer: {acc_cancer}")
 

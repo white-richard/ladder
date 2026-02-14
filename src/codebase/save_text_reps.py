@@ -128,9 +128,9 @@ def save_sent_dict_rsna(args, sent_level=True):
     """
     csv = args.csv
     df = pd.read_csv(csv, index_col=0)
-    # df["IMPRESSION"] = df["IMPRESSION"].fillna(" ")
-    # df["FINDINGS"] = df["FINDINGS"].fillna(" ")
-    # df["Report"] = df["IMPRESSION"] + " " + df["FINDINGS"]
+    df["IMPRESSION"] = df["IMPRESSION"].fillna(" ")
+    df["FINDINGS"] = df["FINDINGS"].fillna(" ")
+    df["REPORT"] = df["IMPRESSION"] + " " + df["FINDINGS"]
     if sent_level:
         df["REPORT"] = df["REPORT"].apply(_split_report_into_segment_breast)
     else:

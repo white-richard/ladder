@@ -11,7 +11,6 @@ import argparse
 import os
 import pickle
 
-
 def _normalize_mammo_dataset_name(dataset):
     name = str(dataset).lower()
     return "cbis" if name == "cbis-ddsm" else name
@@ -75,6 +74,8 @@ def config():
     parser.add_argument('--model-type', default="Classifier", type=str)
     parser.add_argument("--weighted-BCE", default='n', type=str)
     parser.add_argument("--balanced-dataloader", default='n', type=str)
+    parser.add_argument("--smoke-test", default='n', type=str,
+                        help="quick config/data check without running training")
 
     return parser.parse_args()
 
@@ -87,6 +88,7 @@ def main(args):
     args.pretrained_swin_encoder = True if args.pretrained_swin_encoder == "y" else False
     args.swin_model_type = True if args.swin_model_type == "y" else False
     args.running_interactive = True if args.running_interactive == "y" else False
+    args.smoke_test = True if args.smoke_test == "y" else False
 
     args.chk_pt_path = Path(args.checkpoints)
     args.output_path = Path(args.output_path)
