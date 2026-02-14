@@ -17,14 +17,6 @@ def _normalize_mammo_dataset_name(dataset):
     name = str(dataset).lower()
     return "cbis" if name == "cbis-ddsm" else name
 
-
-def _build_rsna_png_path(dir_path, patient_id, image_id):
-    image_name = str(image_id).strip()
-    if image_name.lower().endswith(".png"):
-        return Path(dir_path) / str(patient_id) / image_name
-    return Path(dir_path) / str(patient_id) / f"{image_name}.png"
-
-
 class MammoDataset(Dataset):
     def __init__(self, args, df, transform=None):
         self.args = args
@@ -45,11 +37,8 @@ class MammoDataset(Dataset):
         dataset_name = _normalize_mammo_dataset_name(self.dataset)
 
         if dataset_name == "rsna":
-            img_path = _build_rsna_png_path(
-                self.dir_path,
-                self.df.iloc[idx]['patient_id'],
-                self.df.iloc[idx]['image_id']
-            )
+            img_path = self.dir_path / str(self.df.iloc[idx]['patient_id']) / str(self.df.iloc[idx]['image_id'])
+            img_path = f'{img_path}.png'
         elif dataset_name == "vindr":
             img_path = self.dir_path / str(self.df.iloc[idx]['patient_id']) / str(self.df.iloc[idx]['image_id'])
         elif dataset_name == "embed":
@@ -150,11 +139,7 @@ class MammoDataset_Mapper(Dataset):
         data = self.df.iloc[idx]
         img_path = self.dir_path / str(self.df.iloc[idx]['patient_id']) / str(self.df.iloc[idx]['image_id'])
         if self.dataset.lower() == "rsna":
-            img_path = _build_rsna_png_path(
-                self.dir_path,
-                self.df.iloc[idx]['patient_id'],
-                self.df.iloc[idx]['image_id']
-            )
+            img_path = f'{img_path}.png'
         if (
                 self.args.arch.lower() == "upmc_vindr_breast_clip_det_b5_period_n_ft" or
                 self.args.arch.lower() == "upmc_breast_clip_det_b5_period_n_lp" or
@@ -400,15 +385,10 @@ class MammoDataset_concept_detection(Dataset):
 
     def get_items_for_rsna(self, idx):
         y = torch.tensor(self.annotations.iloc[idx]['cancer'], dtype=torch.long)
-        path = _build_rsna_png_path(
-            self.dir_path,
-            self.annotations.iloc[idx]['patient_id'],
-            self.annotations.iloc[idx]['image_id']
-        )
+        path = self.dir_path / str(self.annotations.iloc[idx]['patient_id']) / str(
+            self.annotations.iloc[idx]['image_id'])
 
-        image = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
-        print(f"DELETE RSNA image path: {path}")
-        exit(0)
+        image = cv2.imread(f'{path}.png', cv2.IMREAD_GRAYSCALE)
         # if self.args.arch.lower() != "clip_b5_upmc" and self.args.arch.lower() != "clip_b5_upmc_rsna":
         image = Image.fromarray(image).convert('RGB')
         image = np.array(image)
