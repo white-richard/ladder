@@ -3,6 +3,7 @@ import pandas as pd
 import torchvision
 from sklearn.metrics import roc_auc_score
 
+# from dataset_factory import UrbanCars
 from metrics_factory import auroc, MultiDimAverageMeter
 import logging
 import os
@@ -251,13 +252,11 @@ def calculate_worst_group_acc_celebA(df, pos_pred_col, neg_pred_col, attribute_c
 
 def calculate_worst_group_acc_rsna_mammo(df, pred_col, attribute_col="calc"):
     df["out_put_predict_bin"] = (df["out_put_predict"] >= 0.5).astype(int)
-    aucroc_initial = auroc(gt=df["out_put_GT"].values, pred=df["out_put_predict"].values)
-    print("Overall AUC-ROC for the whole dataset (Initial model): ", aucroc_initial)
-    aucroc_current = None
+    aucroc = auroc(gt=df["out_put_GT"].values, pred=df["out_put_predict"].values)
+    print("Overall AUC-ROC for the whole dataset (Initial model): ", aucroc)
     if f"{pred_col}_proba" in df.columns:
-        aucroc_current = auroc(gt=df["out_put_GT"].values, pred=df[f"{pred_col}_proba"].values)
-        print("Overall AUC-ROC for the whole dataset (Cur model): ", aucroc_current)
-    
+        aucroc = auroc(gt=df["out_put_GT"].values, pred=df[f"{pred_col}_proba"].values)
+        print("Overall AUC-ROC for the whole dataset (Cur model): ", aucroc)
     print(f"df: {df.shape}")
 
     if "_bin" not in pred_col:
@@ -281,48 +280,9 @@ def calculate_worst_group_acc_rsna_mammo(df, pred_col, attribute_col="calc"):
     print(f"acc Cancer with {attribute_col}: {acc_cancer_attr}")
     print(f"acc Cancer without {attribute_col}: {acc_cancer_wo_attr}")
 
-    mean_accuracy = df[df[pred_col] == df['out_put_GT']].shape[0] / df.shape[0]
-    print(f"Mean accuracy: {mean_accuracy}")
+    print(f"Mean accuracy: {df[df[pred_col] == df['out_put_GT']].shape[0] / df.shape[0]}")
 
-    return {
-        "aucroc_initial": aucroc_initial,
-        "aucroc_current": aucroc_current,
-        "acc_cancer_with_attr": acc_cancer_attr,
-        "acc_cancer_without_attr": acc_cancer_wo_attr,
-        "mean_accuracy": mean_accuracy,
-        "worst_group_acc": acc_cancer_wo_attr,
-        "attribute_col": attribute_col,
-    }
-
-
-def calculate_rsna_consistent_aucroc(df, score_col, attribute_col="calc"):
-    if score_col not in df.columns:
-        raise ValueError(f"Score column '{score_col}' not found in dataframe.")
-    if "out_put_GT" not in df.columns:
-        raise ValueError("Required ground-truth column 'out_put_GT' is missing.")
-
-    def _safe_auroc(gt, pred):
-        try:
-            return auroc(gt=gt, pred=pred)
-        except ValueError:
-            return np.nan
-
-    y_true = df["out_put_GT"].to_numpy()
-    y_score = df[score_col].to_numpy()
-    mean_auroc = _safe_auroc(y_true, y_score)
-
-    positives_without_attr = df[(df["out_put_GT"] == 1) & (df[attribute_col] == 0)]
-    negatives = df[df["out_put_GT"] == 0]
-
-    subset = pd.concat([positives_without_attr, negatives], axis=0)
-    wga_auroc = _safe_auroc(subset["out_put_GT"].to_numpy(), subset[score_col].to_numpy())
-
-    return {
-        "consistent_mean_auroc": mean_auroc,
-        "consistent_wga_auroc": wga_auroc,
-        "attribute_col": attribute_col,
-        "score_col": score_col,
-    }
+    return acc_cancer_wo_attr
 
 
 def calculate_worst_group_acc_med_img(
@@ -363,11 +323,11 @@ def calculate_worst_group_acc_med_img(
     tot_gt = np.concatenate((gt_with_tube, gt_without_tube, gt_negatives), axis=0)
     tot_pred = np.concatenate((pred_with_tube, pred_without_tube, pred_negatives), axis=0)
 
-    auroc_overall = roc_auc_score(tot_gt, tot_pred)
+    auroc = roc_auc_score(tot_gt, tot_pred)
     auroc_with_tube = roc_auc_score(tot_gt_with_tube, tot_pred_with_tube)
     auroc_without_tube = roc_auc_score(tot_gt_without_tube, tot_pred_without_tube)
 
-    print("AUROC for overall:", auroc_overall)
+    print("AUROC for overall:", auroc)
     print(f"AUROC for positives disease with {attribute_col} vs all negatives:", auroc_with_tube)
     print(f"AUROC for positives disease without {attribute_col} vs all negatives:", auroc_without_tube)
 
@@ -378,21 +338,11 @@ def calculate_worst_group_acc_med_img(
                   file=f)
             print(f"Accuracy for {disease} overall patients: {accuracy_overall}", file=f)
             print("\n", file=f)
-            print(f"AUROC for overall (Mean):", auroc_overall, file=f)
+            print(f"AUROC for overall (Mean):", auroc, file=f)
             print(f"AUROC for positive disease with  {attribute_col} vs all negatives: {auroc_with_tube}", file=f)
             print(f"AUROC for positive disease without  {attribute_col} vs all negatives: {auroc_without_tube}", file=f)
 
-            return {
-            "accuracy_with_attr": accuracy_with_tube,
-            "accuracy_without_attr": accuracy_without_tube,
-            "accuracy_overall": accuracy_overall,
-            "auroc_overall": auroc_overall,
-            "auroc_with_attr": auroc_with_tube,
-            "auroc_without_attr": auroc_without_tube,
-            "worst_group_acc": accuracy_without_tube,
-            "attribute_col": attribute_col,
-            "disease": disease,
-            }
+    return accuracy_without_tube
 
 
 def calculate_worst_group_acc_chexpert_no_findings(df, pred_col, attribute_col="attribute"):
@@ -629,7 +579,6 @@ def calculate_performance_metrics_urbancars_df(clf, loader, split, device, bg_ra
 
 def calculate_performance_metrics_urbancars_df_ensemble(
         df, prediction_col, split, bg_ratio=0.95, co_occur_obj_ratio=0.95, log_file=None):
-    raise NotImplementedError("This function is not implemented yet. Please use calculate_performance_metrics_urbancars_df instead.")
     print("################ Computing Whac A Mole Metric ################")
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     normalize = torchvision.transforms.Normalize(
@@ -637,7 +586,8 @@ def calculate_performance_metrics_urbancars_df_ensemble(
     )
     test_transform = torchvision.transforms.Compose([torchvision.transforms.ToTensor(), normalize])
     data_dir = "/restricted/projectnb/batmanlab/rsyed/car/data/"
-    # test_set = UrbanCars(data_dir, "test", transform=test_transform)
+    raise NotImplementedError("Need to update the data dir and label col for UrbanCars dataset")
+    test_set = UrbanCars(data_dir, "test", transform=test_transform)
 
     loader = torch.utils.data.DataLoader(
         test_set,

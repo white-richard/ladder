@@ -8,11 +8,10 @@ import torch
 from torch.utils.data import TensorDataset, DataLoader
 from tqdm import tqdm
 
-from mammo_metrics import is_mammo_dataset 
 from metrics import auroc
 from metrics_factory.calculate_worst_group_acc import calculate_worst_group_acc_waterbirds, \
     calculate_worst_group_acc_rsna_mammo, calculate_worst_group_acc_celebA, calculate_worst_group_acc_med_img, \
-    calculate_worst_group_acc_metashift, calculate_rsna_consistent_aucroc
+    calculate_worst_group_acc_metashift
 from model_factory import create_classifier
 from utils import seed_all, get_input_shape, AverageMeter
 import torch.nn.functional as F
@@ -21,109 +20,6 @@ warnings.filterwarnings("ignore")
 import argparse
 import os
 
-torch.backends.cudnn.benchmark = True
-torch.backends.cuda.matmul.allow_tf32 = True
-torch.backends.cudnn.allow_tf32 = True
-
-
-def _format_metric_value(value):
-    if value is None:
-        return "n/a"
-    if isinstance(value, (float, np.floating)):
-        return f"{value:.4f}"
-    if isinstance(value, (int, np.integer)):
-        return str(int(value))
-    return str(value)
-
-
-def _render_metrics_table(metrics, title=None):
-    if not metrics:
-        return ["_No metrics available._"]
-    lines = []
-    if title:
-        lines.append(f"**{title}**")
-    lines.extend(["| Metric | Value |", "| --- | --- |"])
-    for key, value in metrics.items():
-        lines.append(f"| {key} | {_format_metric_value(value)} |")
-    return lines
-
-
-def _render_pre_post_metrics_table(pre_metrics, post_metrics):
-    if not pre_metrics and not post_metrics:
-        return ["_No metrics available._"]
-
-    keys = []
-    for metrics in (pre_metrics or {}, post_metrics or {}):
-        for key in metrics.keys():
-            if key not in keys:
-                keys.append(key)
-
-    lines = ["| Metric | Before mitigation | After mitigation |", "| --- | --- | --- |"]
-    for key in keys:
-        pre_value = _format_metric_value((pre_metrics or {}).get(key))
-        post_value = _format_metric_value((post_metrics or {}).get(key))
-        lines.append(f"| {key} | {pre_value} | {post_value} |")
-    return lines
-
-
-def _render_hypothesis_table(per_hypothesis_metrics):
-    if not per_hypothesis_metrics:
-        return ["_No per-hypothesis metrics available._"]
-
-    metric_keys = []
-    for entry in per_hypothesis_metrics:
-        for key in entry["metrics"].keys():
-            if key not in metric_keys:
-                metric_keys.append(key)
-
-    has_pre = any(entry.get("pre_metrics") for entry in per_hypothesis_metrics)
-
-    if has_pre:
-        header = ["Hypothesis"]
-        for key in metric_keys:
-            header.extend([f"{key} (before)", f"{key} (after)"])
-        lines = ["| " + " | ".join(header) + " |", "| " + " | ".join(["---"] * len(header)) + " |"]
-        for entry in per_hypothesis_metrics:
-            row = [entry["hypothesis"]]
-            pre_metrics = entry.get("pre_metrics", {})
-            post_metrics = entry.get("metrics", {})
-            for key in metric_keys:
-                row.append(_format_metric_value(pre_metrics.get(key)))
-                row.append(_format_metric_value(post_metrics.get(key)))
-            lines.append("| " + " | ".join(row) + " |")
-        return lines
-
-    header = ["Hypothesis"] + metric_keys
-    lines = ["| " + " | ".join(header) + " |", "| " + " | ".join(["---"] * len(header)) + " |"]
-    for entry in per_hypothesis_metrics:
-        row = [entry["hypothesis"]]
-        for key in metric_keys:
-            row.append(_format_metric_value(entry["metrics"].get(key)))
-        lines.append("| " + " | ".join(row) + " |")
-    return lines
-
-
-def _write_mitigation_report(report_path, dataset, per_hypothesis_metrics, overall_metrics, pre_metrics=None):
-    lines = ["# Mitigation Report", "", f"- Dataset: {dataset}", ""]
-
-    lines.append("## Overall performance summary")
-    lines.extend(_render_pre_post_metrics_table(pre_metrics, overall_metrics))
-    lines.append("")
-
-    if pre_metrics:
-        lines.append("## Before mitigation (overall)")
-        lines.extend(_render_metrics_table(pre_metrics))
-        lines.append("")
-
-    lines.append("## After mitigation (overall)")
-    lines.extend(_render_metrics_table(overall_metrics))
-    lines.append("")
-
-    lines.append("## Per-hypothesis performance")
-    lines.extend(_render_hypothesis_table(per_hypothesis_metrics))
-    lines.append("")
-
-    report_path.write_text("\n".join(lines))
 
 def last_layer_retrain(
         model, epochs, train_data_loader, test_data_loader, criterion, optimizer, device,
@@ -252,7 +148,6 @@ def generate_ds_last_layer_retrain(
     print(no_pt_df.shape)
     no_pt_sorted_df = no_pt_df.sort_values(by=col_name_0, ascending=False)
     no_pt_top = no_pt_sorted_df.head(n_samples)
-    # BUG was pt_sorted_df and not no_pt_sorted_df
     no_pt_bottom = pt_sorted_df.tail(n_samples)
     bal_df = pd.concat([pt_top, pt_bottom, no_pt_top, no_pt_bottom], axis=0)
     print(bal_df.shape)
@@ -428,6 +323,7 @@ def mitigate_error_slices_celebA(args):
     print("\n")
     print(args.save_path / final_csv_name)
     test_df.to_csv(args.save_path / final_csv_name, index=False)
+    test_df.to_csv(args.save_path / final_csv_name, index=False)
 
 
 def mitigate_error_slices_rsna(args):
@@ -440,23 +336,6 @@ def mitigate_error_slices_rsna(args):
     tr_df = pd.read_csv(args.clf_results_csv.format(args.seed, "valid"))
     va_df = pd.read_csv(args.clf_results_csv.format(args.seed, "test"))
 
-    print("------------------------------------------------------------------------------------------------------")
-    print("############################# Overall dataset performance before mitigation: #############################")
-    print("############################### Ground truth slices ########################################")
-    pre_metrics = calculate_worst_group_acc_med_img(
-        va_df.copy(), pos_pred_col="out_put_predict", neg_pred_col="out_put_predict", attribute_col="calc",
-        log_file=args.out_file, disease="Cancer")
-    pre_consistent_metrics = calculate_rsna_consistent_aucroc(
-        va_df.copy(), score_col="out_put_predict", attribute_col="calc")
-    if pre_metrics is not None:
-        pre_metrics.update(pre_consistent_metrics)
-    print(f"Consistent Mean AUROC (pre): {pre_consistent_metrics['consistent_mean_auroc']}")
-    print(f"Consistent WGA AUROC (pre): {pre_consistent_metrics['consistent_wga_auroc']}")
-    print("------------------------------------------------------------------------------------------------------")
-
-    baseline_hyp_metrics = calculate_worst_group_acc_rsna_mammo(
-        va_df.copy(), pred_col="out_put_predict", attribute_col="calc")
-
     args.slice_names = Path(args.slice_names.format(args.seed))
     args.input_shape = get_input_shape(args.dataset)
     criterion = torch.nn.BCEWithLogitsLoss(reduction='mean')
@@ -468,10 +347,8 @@ def mitigate_error_slices_rsna(args):
     for col in col_name_list:
         col_name.append([col, col])
 
-    per_hypothesis_metrics = []
-
-    for idx, col in enumerate(col_name, start=1):
-        print(f"\n  ==================================== Hypothesis {idx}: {col} ====================================")
+    for col in col_name:
+        print(f"\n  ==================================== Hypothesis: {col} ====================================")
         test_df, train_data_loader, test_data_loader = generate_ds_last_layer_retrain(
             tr_df, va_df, args.clf_image_emb_path, args.batch_size, args.seed, n_samples=args.n,
             col_name_0=col[0], col_name_1=col[1])
@@ -488,14 +365,9 @@ def mitigate_error_slices_rsna(args):
         test_df.loc[:, f"{hyp_name}_Predictions_proba"] = proba
 
         print(test_df)
-        metrics = calculate_worst_group_acc_rsna_mammo(
+        acc_worst_group = calculate_worst_group_acc_rsna_mammo(
             test_df, pred_col=f"{hyp_name}_Predictions", attribute_col="calc")
-        per_hypothesis_metrics.append({
-            "hypothesis": hyp_name,
-            "pre_metrics": baseline_hyp_metrics,
-            "metrics": metrics
-        })
-        print(f"Avg. accuracy worst group: {metrics['worst_group_acc']}")
+        print(f"Avg. accuracy worst group: {acc_worst_group}")
         print(f"==================================== Hypothesis: {col} ==================================== \n")
 
     print("\n")
@@ -518,27 +390,13 @@ def mitigate_error_slices_rsna(args):
     print("------------------------------------------------------------------------------------------------------")
     print(f"############################# Overall dataset performance after mitigation: #############################")
     print("############################### Ground truth slices ########################################")
-    overall_metrics = calculate_worst_group_acc_med_img(
+    calculate_worst_group_acc_med_img(
         test_df, pos_pred_col=pos_pred_col, neg_pred_col=neg_pred_col, attribute_col="calc", log_file=args.out_file,
         disease="Cancer")
-    post_consistent_metrics = calculate_rsna_consistent_aucroc(
-        test_df, score_col=pos_pred_col, attribute_col="calc")
-    if overall_metrics is not None:
-        overall_metrics.update(post_consistent_metrics)
-    print(f"Consistent Mean AUROC (post): {post_consistent_metrics['consistent_mean_auroc']}")
-    print(f"Consistent WGA AUROC (post): {post_consistent_metrics['consistent_wga_auroc']}")
     print("------------------------------------------------------------------------------------------------------")
-
 
     print(test_df.columns)
     test_df.to_csv(args.save_path / final_csv_name, index=False)
-    _write_mitigation_report(
-        args.save_path / "mitigation_report.md",
-        args.dataset,
-        per_hypothesis_metrics,
-        overall_metrics,
-        pre_metrics=pre_metrics
-    )
 
 
 def mitigate_error_slices_nih(args):
@@ -638,22 +496,27 @@ def config():
     parser.add_argument(
         "--classifier_check_pt", metavar="DIR",
         default="./Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed{}/model.pkl",
-        help="Path template to load the classifier checkpoint file.")
+        help="Path template to load the classifier checkpoint file."
+    )
     parser.add_argument(
         "--save_path", metavar="DIR",
         default="./Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/clip_img_encoder_ViT-B/32",
-        help="Directory to save trained models, predictions, and final results.")
+        help="Directory to save trained models, predictions, and final results."
+    )
     parser.add_argument(
         "--clf_results_csv", metavar="DIR",
         default="./Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/clip_img_encoder_ViT-B/32/test_dataframe_mitigation.csv",
-        help="Path to CSV containing classifier predictions and ground truth.")
+        help="Path to CSV containing classifier predictions and ground truth."
+    )
     parser.add_argument(
         "--clf_image_emb_path", metavar="DIR",
         default="./Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/clip_img_encoder_ViT-B/32/test_classifier_embeddings.npy",
-        help="Path to classifier-generated image embeddings (.npy), with format placeholders for seed and split.")
+        help="Path to classifier-generated image embeddings (.npy), with format placeholders for seed and split."
+    )
     parser.add_argument(
         "--mode", default="last_layer_retrain",
-        help="last_layer_retrain with validation set (in Kirichenko et al., 2021)")
+        help="last_layer_retrain with validation set (in Kirichenko et al., 2021)"
+    )
     parser.add_argument(
         '--default hypothesis', type=str, nargs='+',
         help='A list of hypothesis, each optionally containing spaces and underscores')
@@ -682,7 +545,7 @@ def main(args):
         mitigate_error_slices_waterbirds(args)
     elif args.dataset.lower() == "celeba":
         mitigate_error_slices_celebA(args)
-    elif is_mammo_dataset(args.dataset):
+    elif args.dataset.lower() == "rsna" or args.dataset.lower() == "vindr":
         mitigate_error_slices_rsna(args)
     elif args.dataset.lower() == "nih":
         mitigate_error_slices_nih(args)
