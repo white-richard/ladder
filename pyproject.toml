@@ -43,6 +43,7 @@ dependencies = [
   "gpytorch",
   "pyro-ppl",
   "netcal",
+  "nvidia-ml-py",
 
   "hydra-core",
   "omegaconf",
