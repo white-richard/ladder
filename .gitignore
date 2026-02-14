@@ -2,6 +2,7 @@
 data/
 *.lock
 out_original/
+out_author/
 *.safetensors
 out_api/
 *.zip
