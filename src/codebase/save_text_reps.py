@@ -1,4 +1,5 @@
 import pickle
+import json
 import re
 import shutil
 import warnings
@@ -114,47 +115,56 @@ def save_vision_text_emb(clip_model, device, save_path, prompt_csv=None, caption
     pickle.dump(sentences, open(save_path / f"sentences_captions_{captioning_type}.pkl", "wb"))
     print(f"Saved prompt sentences embeddings to {save_path}/sent_emb_captions_{captioning_type}.npy")
 
-
 def save_sent_dict_rsna(args, sent_level=True):
     """
-        Parses RSNA reports into sentence-level or full-text format and saves as pickle.
+    Loads a VinDr-style prompt bank JSON (finding -> pos/neg_left/right -> list[str]),
+    flattens into a unique list of sentences, and saves as pickle.
 
-        Args:
-            args (argparse.Namespace): Script arguments.
-            sent_level (bool): Whether to split into sentences (True) or keep full report text.
-
-        Returns:
-            list: Unique list of report sentences.
+    loading from prompt json using this custom function because the authors did
+    not provide any other option as fas as I can tell
     """
-    csv = args.csv
-    df = pd.read_csv(csv, index_col=0)
-    df["IMPRESSION"] = df["IMPRESSION"].fillna(" ")
-    df["FINDINGS"] = df["FINDINGS"].fillna(" ")
-    df["REPORT"] = df["IMPRESSION"] + " " + df["FINDINGS"]
-    if sent_level:
-        df["REPORT"] = df["REPORT"].apply(_split_report_into_segment_breast)
-    else:
-        df["REPORT"] = df["REPORT"].apply(_split_report_into_segment_concat)
+    json_path = Path(args.csv)
 
-    # Convert the Reports to sentences
+    with open(json_path, "r") as f:
+        prompts = json.load(f)
+
+    include_pos = getattr(args, "include_pos", True)
+    include_neg = getattr(args, "include_neg", True)
+
     sentences_list = []
-    if sent_level:
-        for row in df['REPORT']:
-            for sent in row:
-                sentences_list.append(sent)
-    else:
-        for index, row in df.iterrows():
-            if row['REPORT'] != '' and row['REPORT'] != ' ' and row['REPORT'].count('.') > args.report_word_ge:
-                sentences_list.append(row['REPORT'])
+    for finding, buckets in prompts.items():
+        # buckets: dict like {"pos_left":[...], "neg_left":[...], ...}
+        for bucket_name, sents in buckets.items():
+            if bucket_name.startswith("pos_") and not include_pos:
+                continue
+            if bucket_name.startswith("neg_") and not include_neg:
+                continue
+            for s in sents:
+                s = (s or "").strip()
+                if s:
+                    sentences_list.append(s)
+
+    if not sent_level:
+        min_words = getattr(args, "report_word_ge", 0)
+        if min_words and min_words > 0:
+            sentences_list = [s for s in sentences_list if len(s.split()) >= min_words]
 
     sentences_list_unique = list(set(sentences_list))
     print(f"Original Sentences length: {len(sentences_list)}")
     print(f"Unique Sentences length: {len(sentences_list_unique)}")
 
-    sentences_dict_file_name = f"sentences_word_ge_{args.report_word_ge}.pkl" if sent_level \
-        else f"report_sentences_word_ge_{args.report_word_ge}.pkl"
+    # Keep your naming scheme so downstream code doesn't break
+    word_ge = getattr(args, "report_word_ge", 0)
+    sentences_dict_file_name = (
+        f"sentences_word_ge_{word_ge}.pkl"
+        if sent_level
+        else f"report_sentences_word_ge_{word_ge}.pkl"
+    )
+
+    args.save_path.mkdir(parents=True, exist_ok=True)
     pickle.dump(
-        sentences_list_unique, open(args.save_path / sentences_dict_file_name, "wb")
+        sentences_list_unique,
+        open(args.save_path / sentences_dict_file_name, "wb")
     )
 
     print("===" * 20)
@@ -162,6 +172,54 @@ def save_sent_dict_rsna(args, sent_level=True):
     print("===" * 20)
 
     return sentences_list_unique
+
+# def save_sent_dict_rsna(args, sent_level=True):
+#     """
+#         Parses RSNA reports into sentence-level or full-text format and saves as pickle.
+
+#         Args:
+#             args (argparse.Namespace): Script arguments.
+#             sent_level (bool): Whether to split into sentences (True) or keep full report text.
+
+#         Returns:
+#             list: Unique list of report sentences.
+#     """
+#     csv = args.csv
+#     df = pd.read_csv(csv, index_col=0)
+#     df["IMPRESSION"] = df["IMPRESSION"].fillna(" ")
+#     df["FINDINGS"] = df["FINDINGS"].fillna(" ")
+#     df["REPORT"] = df["IMPRESSION"] + " " + df["FINDINGS"]
+#     if sent_level:
+#         df["REPORT"] = df["REPORT"].apply(_split_report_into_segment_breast)
+#     else:
+#         df["REPORT"] = df["REPORT"].apply(_split_report_into_segment_concat)
+
+#     # Convert the Reports to sentences
+#     sentences_list = []
+#     if sent_level:
+#         for row in df['REPORT']:
+#             for sent in row:
+#                 sentences_list.append(sent)
+#     else:
+#         for index, row in df.iterrows():
+#             if row['REPORT'] != '' and row['REPORT'] != ' ' and row['REPORT'].count('.') > args.report_word_ge:
+#                 sentences_list.append(row['REPORT'])
+
+#     sentences_list_unique = list(set(sentences_list))
+#     print(f"Original Sentences length: {len(sentences_list)}")
+#     print(f"Unique Sentences length: {len(sentences_list_unique)}")
+
+#     sentences_dict_file_name = f"sentences_word_ge_{args.report_word_ge}.pkl" if sent_level \
+#         else f"report_sentences_word_ge_{args.report_word_ge}.pkl"
+#     pickle.dump(
+#         sentences_list_unique, open(args.save_path / sentences_dict_file_name, "wb")
+#     )
+
+#     print("===" * 20)
+#     print(f"Sentence dict saved at: {args.save_path} / {sentences_dict_file_name}")
+#     print("===" * 20)
+
+#     return sentences_list_unique
 
 
 def save_rsna_text_emb(clip_model, args):
@@ -173,6 +231,8 @@ def save_rsna_text_emb(clip_model, args):
             args (argparse.Namespace): Arguments with config and paths.
     """
     sentences_list_unique = save_sent_dict_rsna(args, sent_level=True)
+    if len(sentences_list_unique) == 0:
+        raise ValueError("No sentences found after preprocessing.")
     prompt_list = []
     ATTRIBUTES = ["mass", "calc"]
 
