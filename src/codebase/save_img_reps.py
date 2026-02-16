@@ -127,8 +127,9 @@ def compute_performance_metrics(dataset, additional_info, save_path, mode):
 
         df = pd.DataFrame(additional_info)
         oof_df_agg = df[['patient_id', 'laterality', "out_put_GT", 'out_put_predict']].groupby(
-            ['patient_id', 'laterality']).mean()
-        np_gt = oof_df_agg["out_put_GT"].values
+        # Needed to support CBIS, shouldn't affect other datasets
+            ['patient_id', 'laterality']).agg({"out_put_GT": "max", "out_put_predict": "mean"})
+        np_gt = oof_df_agg["out_put_GT"].values.astype(int)
         np_preds = oof_df_agg["out_put_predict"].values
 
         aucroc = auroc(np_gt, np_preds)
