@@ -1,0 +1,8 @@
+Accuracy for Cancer patients with calc: 0.9430379746835443
+Accuracy for Cancer patients without  calc (Worst Group): 0.8529411764705882
+Accuracy for Cancer overall patients: 0.9013605442176871
+
+
+AUROC for overall (Mean): 0.895507500879049
+AUROC for positive disease with  calc vs all negatives: 0.915349755874333
+AUROC for positive disease without  calc vs all negatives: 0.8724554693404102

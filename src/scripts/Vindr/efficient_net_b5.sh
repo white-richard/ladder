@@ -1,14 +1,15 @@
-python ./src/codebase/train_classifier_Mammo.py \
-  --data-dir 'data/Vindr/vindr-mammo-a-large-scale-benchmark-dataset-for-computer-aided-detection-and-diagnosis-in-full-field-digital-mammography-1.0.0' \
-  --img-dir 'images_png' \
-  --csv-file 'vindr_detection_v1_folds_abnormal.csv' \
-  --dataset 'ViNDr' --arch 'tf_efficientnet_b5_ns-detect' --epochs 20 --batch-size 8 --num-workers 0 \
-  --print-freq 10000 --log-freq 500 --running-interactive 'n' \
-  --lr 5.0e-5 --weighted-BCE 'y' --balanced-dataloader 'n'  --n_folds 1  --label "abnormal" \
-  --smoke-test 'n' \
-  --tensorboard-path="out/ViNDr/fold0" \
-  --checkpoints="out/ViNDr/fold0" \
-  --output_path="out/ViNDr/fold0" \
+# python ./src/codebase/train_classifier_Mammo.py \
+#   --data-dir 'data/Vindr/vindr-mammo-a-large-scale-benchmark-dataset-for-computer-aided-detection-and-diagnosis-in-full-field-digital-mammography-1.0.0' \
+#   --img-dir 'images_png' \
+#   --csv-file 'vindr_detection_v1_folds_abnormal.csv' \
+#   --dataset 'ViNDr' --arch 'tf_efficientnet_b5_ns-detect' --epochs 20 --batch-size 8 --num-workers 0 \
+#   --print-freq 10000 --log-freq 500 --running-interactive 'n' \
+#   --lr 5.0e-5 --weighted-BCE 'y' --balanced-dataloader 'n'  --n_folds 1  --label "abnormal" \
+#   --smoke-test 'n' \
+#   --tensorboard-path="out/ViNDr/fold0" \
+#   --checkpoints="out/ViNDr/fold0" \
+#   --output_path="out/ViNDr/fold0" \
+echo "" \
 && echo "=============save_img_reps===================" \
 && python ./src/codebase/save_img_reps.py \
   --seed=0 \
@@ -28,7 +29,7 @@ python ./src/codebase/train_classifier_Mammo.py \
   --dataset="VinDr" \
   --clip_vision_encoder="tf_efficientnet_b5_ns-detect" \
   --clip_check_pt="model_weights/mammoClip-b5-model-best-epoch-7.tar" \
-  --csv="data/upmc_dicom_consolidated_final_folds_BIRADS_num_1_report.csv" \
+  --csv="data/prompts.json" \
   --save_path="out/ViNDr/fold{}" \
   --tokenizers="$HOME/.cache/huggingface/tokenizers" \
   --cache_dir="$HOME/.cache/huggingface/models" \
@@ -79,15 +80,3 @@ python ./src/codebase/train_classifier_Mammo.py \
   --save_path="out/ViNDr/fold{}/clip_img_encoder_tf_efficientnet_b5_ns-detect" \
   --clf_results_csv="out/ViNDr/fold{}/clip_img_encoder_tf_efficientnet_b5_ns-detect/{}_abnormal_dataframe_mitigation.csv" \
   --clf_image_emb_path="out/ViNDr/fold{}/clip_img_encoder_tf_efficientnet_b5_ns-detect/{}_classifier_embeddings.npy" \
-&& echo "=============evaluate===================" \
-  && python ./src/codebase/evaluate.py \
-  --seed=0 \
-  --dataset="ViNDr" \
-  --save_path="out/ViNDr/fold{0}" \
-  --clf_results_csv="out/ViNDr/fold0/clip_img_encoder_tf_efficientnet_b5_ns-detect/test_additional_info.csv" \
-  --split="test" \
-  --pred_col="out_put_predict" \
-  --threshold=0.5 \
-  --precision_k 10 \
-  --mean_consistent_wga_slices \
-  --slice_names "out/ViNDr/fold0/clip_img_encoder_tf_efficientnet_b5_ns-detect/abnormal_prompt_dict.pkl"
