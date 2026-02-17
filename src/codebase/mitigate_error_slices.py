@@ -545,10 +545,12 @@ def main(args):
         mitigate_error_slices_waterbirds(args)
     elif args.dataset.lower() == "celeba":
         mitigate_error_slices_celebA(args)
-    elif args.dataset.lower() == "rsna" or args.dataset.lower() == "vindr":
+    elif args.dataset.lower() == "rsna" or args.dataset.lower() == "vindr" or args.dataset.lower() == "cbis-ddsm":
         mitigate_error_slices_rsna(args)
     elif args.dataset.lower() == "nih":
         mitigate_error_slices_nih(args)
+    else:
+        raise ValueError(f"Unsupported dataset: {args.dataset}")
 
     print(f"log saved at: {args.out_file}")
 
