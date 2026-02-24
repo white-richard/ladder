@@ -41,6 +41,38 @@ DATASETS = [
 ]
 
 
+def _find_birads_column(df):
+    preferred = [
+        "breast_birads",
+        "BIRADS",
+        "birads",
+        "birads_assessment",
+        "birads_category",
+        "assessment",
+    ]
+    lower_map = {str(col).lower(): col for col in df.columns}
+    for name in preferred:
+        if name in df.columns:
+            return name
+        key = str(name).lower()
+        if key in lower_map:
+            return lower_map[key]
+    for col in df.columns:
+        if "birads" in str(col).lower():
+            return col
+    return None
+
+
+def _extract_birads_numeric(value):
+    if pd.isna(value):
+        return np.nan
+    numeric = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
+    if pd.notna(numeric):
+        return float(numeric)
+    extracted = pd.Series([str(value)]).str.extract(r"(\d+)")[0].iloc[0]
+    return pd.to_numeric(pd.Series([extracted]), errors="coerce").iloc[0]
+
+
 def get_dataset_class(dataset_name):
     """Return the dataset class with the given name."""
     if dataset_name not in globals():
@@ -557,6 +589,7 @@ class RSNADataset(Dataset):
         self.dataset_name = str(dataset).lower()
         if self.dataset_name == "cbis-ddsm":
             self.dataset_name = "cbis"
+        self.birads_col = _find_birads_column(self.df)
 
         if self.dataset_name in {"vindr", "cbis"}:
             unique_patient_ids = {id: idx for idx, id in enumerate(df['patient_id'].unique())}
@@ -622,6 +655,9 @@ class RSNADataset(Dataset):
                 patient_id = torch.tensor(data["patient_id_idx"], dtype=torch.long)
             else:
                 patient_id = torch.tensor(idx, dtype=torch.long)
+        breast_birads = torch.tensor(
+            _extract_birads_numeric(data[self.birads_col]) if self.birads_col else np.nan, dtype=torch.float32
+        )
         return {
             'img': img,
             'label': label,
@@ -633,7 +669,8 @@ class RSNADataset(Dataset):
             'mole': mole,
             'fold': fold,
             'patient_id': patient_id,
-            'laterality': laterality_tensor
+            'laterality': laterality_tensor,
+            'breast_birads': breast_birads,
         }
 
 
@@ -788,4 +825,3 @@ def collate_NIH(batch):
         "text": text,
         "img_path": img_path
     }
-

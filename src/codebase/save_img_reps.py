@@ -211,6 +211,7 @@ def init_additional_info(dataset):
             "mark": torch.FloatTensor(),
             "scar": torch.FloatTensor(),
             "clip": torch.FloatTensor(),
+            "breast_birads": torch.FloatTensor(),
         }
     elif dataset.lower() == "nih":
         return {
@@ -262,12 +263,13 @@ def update_additional_info(additional_info, batch_info, dataset):
         return additional_info
 
     elif is_mammo_dataset(dataset):
-        y, y_pred, mass, calc, mole, mark, scar, clip, patient_id, laterality = batch_info["y"], batch_info["y_pred"], \
+        y, y_pred, mass, calc, mole, mark, scar, clip, patient_id, laterality, breast_birads = batch_info["y"], batch_info["y_pred"], \
             batch_info["mass"], batch_info["calc"], \
             batch_info["mole"], batch_info["mark"], \
             batch_info["scar"], batch_info["clip"], \
             batch_info["patient_id"], \
-            batch_info["laterality"]
+            batch_info["laterality"], \
+            batch_info["breast_birads"]
 
         additional_info["patient_id"] = torch.cat((additional_info["patient_id"], patient_id), dim=0)
         additional_info["laterality"] = torch.cat((additional_info["laterality"], laterality), dim=0)
@@ -281,6 +283,7 @@ def update_additional_info(additional_info, batch_info, dataset):
         additional_info["mark"] = torch.cat((additional_info["mark"], mark), dim=0)
         additional_info["scar"] = torch.cat((additional_info["scar"], scar), dim=0)
         additional_info["clip"] = torch.cat((additional_info["clip"], clip), dim=0)
+        additional_info["breast_birads"] = torch.cat((additional_info["breast_birads"], breast_birads), dim=0)
         return additional_info
 
 
@@ -327,6 +330,7 @@ def process_batch(batch, device, clf, clip_model, classifier_type, dataset):
         mole = batch['mole']
         patient_id = batch['patient_id']
         laterality = batch['laterality']
+        breast_birads = batch['breast_birads']
 
         reps_classifier, pred_logits = clf(img)
         y_pred = pred_logits.squeeze(1).sigmoid().to('cpu')
@@ -334,7 +338,7 @@ def process_batch(batch, device, clf, clip_model, classifier_type, dataset):
 
         batch_info = {
             "y": y, "y_pred": y_pred, "mass": mass, "calc": calc, "clip": clip, "scar": scar, "mark": mark,
-            "mole": mole, "patient_id": patient_id, "laterality": laterality
+            "mole": mole, "patient_id": patient_id, "laterality": laterality, "breast_birads": breast_birads
         }
         return reps_classifier, reps_clip, batch_info
 
