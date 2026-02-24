@@ -292,7 +292,6 @@ def save_rsna_text_emb(clip_model, args):
     np.save(args.save_path / f"sent_emb_word_ge_{args.report_word_ge}.npy", text_emb_np)
     print(f"files saved at: {args.save_path}")
 
-
 def save_sent_dict_nih(args, sent_level=True):
     """
         Parses NIH reports and saves sentence dictionaries (e.g., with/without 'tube').
@@ -526,6 +525,17 @@ def save_emb(clip_model, args):
 def main(args):
     seed_all(args.seed)
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
+    if Path(args.save_path).exists():
+        for pattern in [
+           "attr_embs_report.pth",
+            "sent_emb_word_ge_*.npy",
+           "*sentences_word_ge_*.pkl",
+            "sentences_captions_*.pkl",
+            "sent_emb_captions_*.npy"
+        ]:
+            for old_file in args.save_path.glob(pattern):
+                old_file.unlink()
+                print(f"Deleted old save: {old_file}")
     args.save_path = Path(args.save_path.format(args.seed)) / f"clip_img_encoder_{args.clip_vision_encoder}"
     args.save_path.mkdir(parents=True, exist_ok=True)
     print("\n")

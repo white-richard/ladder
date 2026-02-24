@@ -69,7 +69,12 @@ def last_layer_retrain(
             scaler.update()
             optimizer.zero_grad()
         print(f"[{epoch + 1:03d}/{epochs:03d} epoch train - Avg Loss: {losses.avg:.4f}]")
+    model_name = Path(model_name)
+    if model_name.exists():
+        model_name.unlink()
+        print(f"Deleted old model: {model_name}")
     torch.save({'model': model.state_dict()}, model_name)
+
     model.eval()
     progress_iter = tqdm(enumerate(test_data_loader), desc=f"[test]", total=len(test_data_loader))
 
@@ -539,6 +544,15 @@ def main(args):
     args.save_path = Path(args.save_path.format(args.seed))
     args.save_path.mkdir(parents=True, exist_ok=True)
     args.out_file = args.save_path / f"ladder_mitigate_slices.txt"
+    if Path(args.save_path).exists():
+        for pattern in [
+            "final_mitigation.csv",
+            "ladder_mitigate_slices.txt",
+            "all_slices_y_ensemble_*.pth",
+        ]:
+            for old_file in args.save_path.glob(pattern):
+                old_file.unlink()
+                print(f"Deleted old save: {old_file}")
     print("\n")
     print(args.save_path)
     if args.dataset.lower() == "waterbirds":

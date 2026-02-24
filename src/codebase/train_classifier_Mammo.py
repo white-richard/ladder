@@ -83,6 +83,20 @@ def config():
 def main(args):
     seed_all(args.seed)
     # get paths
+    if Path(args.save_path).exists():
+        for pattern in [
+           "attr_embs_report.pth",
+            "sent_emb_word_ge_*.npy",
+           "*sentences_word_ge_*.pkl",
+            "sentences_captions_*.pkl",
+            "sent_emb_captions_*.npy"
+            "seed_*_outputs.csv",
+            "*_seed_*_fold_best*.pth",
+        ]:
+            for old_file in args.save_path.glob(pattern):
+                old_file.unlink()
+                print(f"Deleted old save: {old_file}")
+
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     args.apex = True if args.apex == "y" else False
     args.pretrained_swin_encoder = True if args.pretrained_swin_encoder == "y" else False

@@ -328,6 +328,15 @@ def main(args):
     reps_clf_train, reps_clip_train, reps_clf_test, reps_clip_test, save_path = init_path(
         args.seed, args.clf_reps_path, args.clip_reps_path, args.save_path, args.dataset
     )
+    if Path(args.save_path).exists():
+        for pattern in [
+            "aligner_out.txt",
+            "aligner_*.pth"
+        ]:
+            for old_file in args.save_path.glob(pattern):
+                old_file.unlink()
+                print(f"Deleted old save: {old_file}")
+                
     print(save_path / "aligner_out.txt")
     logging.basicConfig(
         filename=save_path / "aligner_out.txt", level=logging.INFO, format='%(asctime)s - %(message)s')

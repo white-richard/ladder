@@ -147,17 +147,17 @@ def get_dataloader_mammo(args):
     valid_dataset = MammoDataset(args=args, df=args.valid_folds, transform=val_tfm)
 
     if args.balanced_dataloader == "y":
-        weight_path = args.output_path / f"random_sampler_weights_fold{str(args.cur_fold)}.pkl"
-        if weight_path.exists():
-            weights = pickle.load(open(weight_path, "rb"))
-        else:
-            weight_for_positive_class = args.sampler_weights[f"fold{str(args.cur_fold)}"]["pos_wt"]
-            weight_for_negative_class = args.sampler_weights[f"fold{str(args.cur_fold)}"]["neg_wt"]
-            args.train_folds["weights_random_sampler"] = args.train_folds.apply(
-                lambda row: weight_for_positive_class if row["cancer"] == 1 else weight_for_negative_class, axis=1
-            )
-            weights = args.train_folds["weights_random_sampler"].values
-            pickle.dump(weights, open(args.output_path / f"random_sampler_weights_fold{args.cur_fold}.pkl", "wb"))
+        # weight_path = args.output_path / f"random_sampler_weights_fold{str(args.cur_fold)}.pkl"
+        # if weight_path.exists():
+        #     weights = pickle.load(open(weight_path, "rb"))
+        # else:
+        weight_for_positive_class = args.sampler_weights[f"fold{str(args.cur_fold)}"]["pos_wt"]
+        weight_for_negative_class = args.sampler_weights[f"fold{str(args.cur_fold)}"]["neg_wt"]
+        args.train_folds["weights_random_sampler"] = args.train_folds.apply(
+            lambda row: weight_for_positive_class if row["cancer"] == 1 else weight_for_negative_class, axis=1
+        )
+        weights = args.train_folds["weights_random_sampler"].values
+        pickle.dump(weights, open(args.output_path / f"random_sampler_weights_fold{args.cur_fold}.pkl", "wb"))
 
         weights = weights.tolist()
         sampler = WeightedRandomSampler(weights, len(weights), replacement=True)

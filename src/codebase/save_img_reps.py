@@ -410,6 +410,19 @@ def save_reps(loader, device, mode, clf, clip_model, save_path, classifier_type,
 def main(args):
     seed_all(args.seed)
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
+    
+    if Path(args.save_path).exists():
+        for pattern in [
+            "*_additional_info.pkl",
+            "*_classifier_embeddings.npy",
+            "*_clip_embeddings.npy",
+            "*final_results.pkl",
+            "*_additional_info.csv"
+        ]:
+            for old_file in args.save_path.glob(pattern):
+                old_file.unlink()
+                print(f"Deleted old save: {old_file}")
+                
     args.save_path = Path(args.save_path.format(args.seed)) / f"clip_img_encoder_{args.clip_vision_encoder}"
     args.save_path.mkdir(parents=True, exist_ok=True)
     print(args.save_path)
