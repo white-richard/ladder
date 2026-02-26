@@ -671,6 +671,7 @@ class RSNADataset(Dataset):
             'patient_id': patient_id,
             'laterality': laterality_tensor,
             'breast_birads': breast_birads,
+            'img_path': img_path,
         }
 
 

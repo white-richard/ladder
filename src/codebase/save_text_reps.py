@@ -5,14 +5,13 @@ import shutil
 import warnings
 from pathlib import Path
 import time
-import clip
 import numpy as np
 import pandas as pd
 import torch
 from tqdm import tqdm
 
 from mammo_metrics import is_mammo_dataset
-from model_factory import create_clip
+from model_factory import create_embedding_backend, resolve_backend_save_path, validate_backend_args
 # from prompts.prompt import create_waterbirds_prompts, create_rsna_mammo_prompts, create_celebA_prompts, \
 #     create_metashift_prompts, create_cheXpert_NoFinding_prompts
 from utils import seed_all, get_input_shape, _split_report_into_segment_breast, \
@@ -66,17 +65,52 @@ def config():
     parser.add_argument(
         "--report-word-ge", default=3, type=int,
         help="Minimum number of words in a sentence/report (used for sentence filtering).")
+    parser.add_argument(
+        "--backend",
+        default="legacy",
+        choices=["legacy", "llava_mammo"],
+        help="Embedding backend to use. 'legacy' keeps CLIP+aligner flow; 'llava_mammo' uses Llava embeddings.",
+    )
+    parser.add_argument(
+        "--llava_model_path",
+        default="",
+        type=str,
+        help="Local path to unpacked Llava-Mammo model or adapter directory (required for llava_mammo backend).",
+    )
+    parser.add_argument(
+        "--llava_base_model_id",
+        default="llava-hf/llava-v1.6-vicuna-7b-hf",
+        type=str,
+        help="Base Llava model ID used when llava_model_path points to an adapter-only checkpoint.",
+    )
+    parser.add_argument(
+        "--llava_processor_id",
+        default="llava-hf/llava-v1.6-vicuna-7b-hf",
+        type=str,
+        help="Processor ID for Llava input preprocessing.",
+    )
+    parser.add_argument(
+        "--llava_text_batch_size",
+        default=32,
+        type=int,
+        help="Micro-batch size for Llava text embedding extraction.",
+    )
+    parser.add_argument(
+        "--llava_text_max_length",
+        default=256,
+        type=int,
+        help="Max token length for Llava text embedding extraction.",
+    )
     return parser.parse_args()
 
 
-def save_vision_text_emb(clip_model, device, save_path, prompt_csv=None, captioning_type="blip"):
+def save_vision_text_emb(embedding_backend, save_path, prompt_csv=None, captioning_type="blip"):
     """
         Generates and saves CLIP text embeddings for vision prompts or captions.
 
         Args:
-            clip_model (dict): CLIP model and tokenizer.
-            device (str): Device to run inference on.
-            save_path (Path): Directory to save outputs.
+        embedding_backend: Embedding backend object.
+        save_path (Path): Directory to save outputs.
             prompt_csv (str): Path to CSV containing image captions or prompts.
             captioning_type (str): Captioning model used (e.g., 'blip', 'gpt-4').
     """
@@ -100,11 +134,8 @@ def save_vision_text_emb(clip_model, device, save_path, prompt_csv=None, caption
     print("==================================================")
     print(sentences[:10])
 
-    with torch.no_grad():
-        text_token = clip.tokenize(sentences).to(device)
-        text_emb = clip_model["model"].encode_text(text_token.to(device))
-        text_emb /= text_emb.norm(dim=-1, keepdim=True)
-    text_emb_np = text_emb.cpu().numpy()
+    text_emb = embedding_backend.encode_texts(sentences, dataset_type="vision")
+    text_emb_np = text_emb.detach().cpu().numpy()
     print("Sentences: ")
     print(text_emb_np.shape)
     print(len(sentences))
@@ -220,12 +251,12 @@ def save_sent_dict_rsna(args, sent_level=True):
 #     return sentences_list_unique
 
 
-def save_rsna_text_emb(clip_model, args):
+def save_rsna_text_emb(embedding_backend, args):
     """
         Computes sentence embeddings for RSNA reports and saves them.
 
         Args:
-            clip_model (dict): Loaded CLIP model for text encoding.
+            embedding_backend: Embedding backend object for text encoding.
             args (argparse.Namespace): Arguments with config and paths.
     """
     sentences_list_unique = save_sent_dict_rsna(args, sent_level=True)
@@ -252,11 +283,7 @@ def save_rsna_text_emb(clip_model, args):
     attr_embs = []
     with torch.no_grad():
         for prompt in prompt_list:
-            text_token = clip_model["tokenizer"](
-                prompt, padding="longest", truncation=True, return_tensors="pt", max_length=256
-            )
-            text_emb = clip_model["model"].encode_text(text_token.to(args.device))
-            text_emb = clip_model["model"].text_projection(text_emb) if clip_model["model"].projection else text_emb
+            text_emb = embedding_backend.encode_texts(prompt, dataset_type="medical")
             text_emb = text_emb.mean(dim=0, keepdim=True)
             text_emb /= text_emb.norm(dim=-1, keepdim=True)
             attr_embs.append(text_emb)
@@ -273,12 +300,7 @@ def save_rsna_text_emb(clip_model, args):
     with torch.no_grad():
         with tqdm(total=len(sentences_list_unique)) as t:
             for sent in sentences_list_unique:
-                text_token = clip_model["tokenizer"](
-                    sent, padding="longest", truncation=True, return_tensors="pt", max_length=256)
-
-                text_emb = clip_model["model"].encode_text(text_token.to(args.device))
-                text_emb = clip_model["model"].text_projection(text_emb) if clip_model["model"].projection else text_emb
-                text_emb = text_emb / torch.norm(text_emb, dim=1, keepdim=True)
+                text_emb = embedding_backend.encode_texts([sent], dataset_type="medical")
                 text_emb = text_emb.detach().cpu().numpy()
                 text_embeddings_list.append(text_emb)
 
@@ -500,12 +522,12 @@ def save_nih_text_emb_cxr_clip(clip_model, args):
     print("================================ Saving embeddings of all sentences =================================")
 
 
-def save_emb(clip_model, args):
+def save_emb(embedding_backend, args):
     """
     Main switch to run the appropriate sentence embedding pipeline for a dataset.
 
     Args:
-        clip_model (dict): Loaded CLIP or MedCLIP model.
+        embedding_backend: Loaded embedding backend object.
         args (argparse.Namespace): Config with dataset name, paths, etc.
     """
 
@@ -513,18 +535,24 @@ def save_emb(clip_model, args):
             args.dataset.lower() == "waterbirds" or args.dataset.lower() == "celeba" or
             args.dataset.lower() == "metashift"
     ):
-        save_vision_text_emb(clip_model, args.device, args.save_path, args.prompt_csv, args.captioning_type)
+        save_vision_text_emb(embedding_backend, args.save_path, args.prompt_csv, args.captioning_type)
 
     elif is_mammo_dataset(args.dataset):
-        save_rsna_text_emb(clip_model, args)
+        save_rsna_text_emb(embedding_backend, args)
 
-    elif args.dataset.lower() == "nih" and clip_model["type"] == "cxr_clip":
-        save_nih_text_emb_cxr_clip(clip_model, args)
+    elif (
+            args.dataset.lower() == "nih"
+            and getattr(embedding_backend, "clip_model", {}).get("type") == "cxr_clip"
+    ):
+        save_nih_text_emb_cxr_clip(embedding_backend.clip_model, args)
 
 
 def main(args):
     seed_all(args.seed)
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
+    validate_backend_args(args)
+    args.save_path = resolve_backend_save_path(args)
+
     if Path(args.save_path).exists():
         for pattern in [
            "attr_embs_report.pth",
@@ -536,13 +564,14 @@ def main(args):
             for old_file in args.save_path.glob(pattern):
                 old_file.unlink()
                 print(f"Deleted old save: {old_file}")
-    args.save_path = Path(args.save_path.format(args.seed)) / f"clip_img_encoder_{args.clip_vision_encoder}"
+
     args.save_path.mkdir(parents=True, exist_ok=True)
     print("\n")
+    print(f"Embedding backend: {args.backend}")
     print(args.save_path)
     args.input_shape = get_input_shape(args.dataset)
-    clip_model = create_clip(args)
-    save_emb(clip_model, args)
+    embedding_backend = create_embedding_backend(args)
+    save_emb(embedding_backend, args)
 
 
 if __name__ == "__main__":

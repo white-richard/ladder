@@ -11,6 +11,13 @@ from .resnet_nih import ResNet
 from cxrclip.data.data_utils import load_tokenizer
 from cxrclip.model import CXRClip
 from utils import get_hparams
+from .vision_backend import (
+    LegacyEmbeddingBackend,
+    LlavaMammoEmbeddingBackend,
+    resolve_backend_save_path,
+    resolve_backend_tag,
+    validate_backend_args,
+)
 
 
 def _is_mammo_dataset(dataset):
@@ -131,3 +138,15 @@ def create_clip(args):
             "type": "vision_clip",
             "tokenizer": tokenizer
         }
+
+
+def create_embedding_backend(args):
+    validate_backend_args(args)
+    backend = getattr(args, "backend", "legacy")
+    if backend == "llava_mammo":
+        print("Using embedding backend: llava_mammo")
+        return LlavaMammoEmbeddingBackend(args)
+
+    print("Using embedding backend: legacy")
+    clip_model = create_clip(args)
+    return LegacyEmbeddingBackend(clip_model, device=args.device)

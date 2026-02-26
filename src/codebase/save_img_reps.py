@@ -13,7 +13,12 @@ from metrics_factory import eval_metrics_vision, pfbeta_binarized, pr_auc, auroc
     compute_accuracy_np_array
 from metrics_factory.calculate_worst_group_acc import calculate_performance_metrics_urbancars_df
 from mammo_metrics import is_mammo_dataset
-from model_factory import create_classifier, create_clip
+from model_factory import (
+    create_classifier,
+    create_embedding_backend,
+    resolve_backend_save_path,
+    validate_backend_args,
+)
 from utils import seed_all, get_input_shape
 
 warnings.filterwarnings("ignore")
@@ -60,6 +65,53 @@ def config():
         "--tokenizers", default="", type=str, help="Tokenizer path required by CXR-CLIP or Mammo-CLIP.")
     parser.add_argument(
         "--cache_dir", default="", type=str, help="Cache directory required by CXR-CLIP or Mammo-CLIP.")
+    parser.add_argument(
+        "--backend",
+        default="legacy",
+        choices=["legacy", "llava_mammo"],
+        help="Embedding backend to use. 'legacy' keeps CLIP+aligner flow; 'llava_mammo' uses Llava embeddings.",
+    )
+    parser.add_argument(
+        "--llava_model_path",
+        default="",
+        type=str,
+        help="Local path to unpacked Llava-Mammo model or adapter directory (required for llava_mammo backend).",
+    )
+    parser.add_argument(
+        "--llava_base_model_id",
+        default="llava-hf/llava-v1.6-vicuna-7b-hf",
+        type=str,
+        help="Base Llava model ID used when llava_model_path points to an adapter-only checkpoint.",
+    )
+    parser.add_argument(
+        "--llava_processor_id",
+        default="llava-hf/llava-v1.6-vicuna-7b-hf",
+        type=str,
+        help="Processor ID for Llava input preprocessing.",
+    )
+    parser.add_argument(
+        "--llava_text_batch_size",
+        default=32,
+        type=int,
+        help="Micro-batch size for Llava text embedding extraction (used by llava backend text calls).",
+    )
+    parser.add_argument(
+        "--llava_text_max_length",
+        default=256,
+        type=int,
+        help="Max token length for Llava text embedding extraction (used by llava backend text calls).",
+    )
+    parser.add_argument(
+        "--debug_max_batches",
+        default=0,
+        type=int,
+        help="If > 0, process only this many batches per split (debug/smoke runs).",
+    )
+    parser.add_argument(
+        "--debug_dry_run",
+        action="store_true",
+        help="Validate argument wiring and resolved paths, then exit before loading models/dataloaders.",
+    )
     return parser.parse_args()
 
 
@@ -287,7 +339,7 @@ def update_additional_info(additional_info, batch_info, dataset):
         return additional_info
 
 
-def process_batch(batch, device, clf, clip_model, classifier_type, dataset):
+def process_batch(batch, device, clf, embedding_backend, classifier_type, dataset):
     """
     Processes a single batch to extract classifier and CLIP representations.
 
@@ -295,7 +347,7 @@ def process_batch(batch, device, clf, clip_model, classifier_type, dataset):
         batch (dict or tuple): Input batch from dataloader.
         device (str): 'cuda' or 'cpu'.
         clf (nn.Module or dict): Classifier model or components.
-        clip_model (dict): CLIP model components.
+        embedding_backend: Embedding backend object for image representation extraction.
         classifier_type (str): Architecture name.
         dataset (str): Dataset name.
 
@@ -313,8 +365,7 @@ def process_batch(batch, device, clf, clip_model, classifier_type, dataset):
         pred_logits = clf["classifier"](reps_classifier)
 
         y_pred = pred_logits.argmax(dim=1).detach().cpu()
-        reps_clip = clip_model["model"].encode_image(img)
-        reps_clip /= reps_clip.norm(dim=-1, keepdim=True)
+        reps_clip = embedding_backend.encode_images(img, dataset=dataset)
 
         batch_info = {"idx": i, "y": y, "y_pred": y_pred, "bg_attr": bg_attr}
         return reps_classifier, reps_clip, batch_info
@@ -331,10 +382,11 @@ def process_batch(batch, device, clf, clip_model, classifier_type, dataset):
         patient_id = batch['patient_id']
         laterality = batch['laterality']
         breast_birads = batch['breast_birads']
+        img_path = batch.get('img_path')
 
         reps_classifier, pred_logits = clf(img)
         y_pred = pred_logits.squeeze(1).sigmoid().to('cpu')
-        reps_clip = clip_model["model"].encode_image_normalized(img)
+        reps_clip = embedding_backend.encode_images(img, dataset=dataset, image_paths=img_path)
 
         batch_info = {
             "y": y, "y_pred": y_pred, "mass": mass, "calc": calc, "clip": clip, "scar": scar, "mark": mark,
@@ -342,22 +394,30 @@ def process_batch(batch, device, clf, clip_model, classifier_type, dataset):
         }
         return reps_classifier, reps_clip, batch_info
 
-    elif dataset.lower() == "nih" and clip_model["type"] == "cxr_clip" and classifier_type.lower() == "resnet50":
+    elif dataset.lower() == "nih" and classifier_type.lower() == "resnet50":
         img, y, tube, effusion, text = batch["img"], batch["label"], batch["tube"], batch["effusion"], batch["text"]
         img_path = batch["img_path"]
         img = img.to(device)
         pred_logits, _, reps_classifier = clf(img)
         y_pred = pred_logits.squeeze(1).sigmoid().to('cpu')
 
-        reps_clip = clip_model["model"].encode_image(img.to(device))
-        reps_clip = clip_model["model"].image_projection(reps_clip) if clip_model["model"].projection else reps_clip
-        reps_clip = reps_clip / torch.norm(reps_clip, dim=1, keepdim=True)
+        reps_clip = embedding_backend.encode_images(img.to(device), dataset=dataset, image_paths=img_path)
 
         batch_info = {"y": y.squeeze(1), "y_pred": y_pred, "tube": tube, "effusion": effusion, "img_path": img_path}
         return reps_classifier, reps_clip, batch_info
 
 
-def save_reps(loader, device, mode, clf, clip_model, save_path, classifier_type, dataset="breast"):
+def save_reps(
+        loader,
+        device,
+        mode,
+        clf,
+        embedding_backend,
+        save_path,
+        classifier_type,
+        dataset="breast",
+        debug_max_batches=0,
+):
     """
     Saves feature embeddings and associated metadata for a data split.
 
@@ -366,7 +426,7 @@ def save_reps(loader, device, mode, clf, clip_model, save_path, classifier_type,
         device (str): Device to run inference.
         mode (str): Mode/split name.
         clf (nn.Module or dict): Classifier model.
-        clip_model (dict): CLIP model or vision-language model.
+        embedding_backend: Embedding backend used for image feature extraction.
         save_path (Path): Path to save outputs.
         classifier_type (str): Classifier name string.
         dataset (str): Dataset name.
@@ -379,7 +439,7 @@ def save_reps(loader, device, mode, clf, clip_model, save_path, classifier_type,
         with tqdm(total=len(loader), desc=f"Processing {mode} data") as t:
             for batch_id, batch in enumerate(loader):
                 image_reps_clf, image_reps_clip, batch_info = process_batch(
-                    batch, device, clf, clip_model, classifier_type, dataset)
+                    batch, device, clf, embedding_backend, classifier_type, dataset)
                 reps_classifier = [x.detach().cpu().numpy() for x in image_reps_clf]
                 reps_clip = [x.detach().cpu().numpy() for x in image_reps_clip]
                 all_reps_clip.extend(reps_clip)
@@ -388,6 +448,9 @@ def save_reps(loader, device, mode, clf, clip_model, save_path, classifier_type,
 
                 t.set_postfix(batch_id='{0}'.format(batch_id))
                 t.update()
+                if debug_max_batches > 0 and (batch_id + 1) >= debug_max_batches:
+                    print(f"Debug mode: stopping {mode} after {debug_max_batches} batches.")
+                    break
 
     all_reps_classifier = np.stack(all_reps_classifier)
     all_reps_clip = np.stack(all_reps_clip)
@@ -414,7 +477,10 @@ def save_reps(loader, device, mode, clf, clip_model, save_path, classifier_type,
 def main(args):
     seed_all(args.seed)
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
-    
+
+    validate_backend_args(args)
+    args.save_path = resolve_backend_save_path(args)
+
     if Path(args.save_path).exists():
         for pattern in [
             "*_additional_info.pkl",
@@ -426,25 +492,56 @@ def main(args):
             for old_file in args.save_path.glob(pattern):
                 old_file.unlink()
                 print(f"Deleted old save: {old_file}")
-                
-    args.save_path = Path(args.save_path.format(args.seed)) / f"clip_img_encoder_{args.clip_vision_encoder}"
+
     args.save_path.mkdir(parents=True, exist_ok=True)
+    print(f"Embedding backend: {args.backend}")
     print(args.save_path)
+    if args.debug_dry_run:
+        print("Debug dry run enabled; exiting before model and dataloader initialization.")
+        return
+
     args.input_shape = get_input_shape(args.dataset)
     clf = create_classifier(args)
-    clip_model = create_clip(args)
+    embedding_backend = create_embedding_backend(args)
     args.shuffle = False
     data_loaders = create_dataloaders(args)
 
     if "train_loader" in data_loaders:
-        save_reps(data_loaders["train_loader"], args.device, "train", clf, clip_model, args.save_path, args.classifier,
-                  args.dataset)
+        save_reps(
+            data_loaders["train_loader"],
+            args.device,
+            "train",
+            clf,
+            embedding_backend,
+            args.save_path,
+            args.classifier,
+            args.dataset,
+            debug_max_batches=args.debug_max_batches,
+        )
     if "test_loader" in data_loaders:
-        save_reps(data_loaders["test_loader"], args.device, "test", clf, clip_model, args.save_path, args.classifier,
-                  args.dataset)
+        save_reps(
+            data_loaders["test_loader"],
+            args.device,
+            "test",
+            clf,
+            embedding_backend,
+            args.save_path,
+            args.classifier,
+            args.dataset,
+            debug_max_batches=args.debug_max_batches,
+        )
     if "valid_loader" in data_loaders:
-        save_reps(data_loaders["valid_loader"], args.device, "valid", clf, clip_model, args.save_path, args.classifier,
-                  args.dataset)
+        save_reps(
+            data_loaders["valid_loader"],
+            args.device,
+            "valid",
+            clf,
+            embedding_backend,
+            args.save_path,
+            args.classifier,
+            args.dataset,
+            debug_max_batches=args.debug_max_batches,
+        )
 
 
 if __name__ == "__main__":

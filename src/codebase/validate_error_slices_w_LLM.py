@@ -6,13 +6,12 @@ import re
 from pathlib import Path
 
 import anthropic
-import clip
 import numpy as np
 import pandas as pd
 import requests
 import torch
 from mammo_metrics import is_mammo_dataset
-from model_factory import create_clip
+from model_factory import create_embedding_backend
 from openai import OpenAI
 from prompts.gpt4_prompt import (
     create_CELEBA_prompts,
@@ -98,7 +97,13 @@ def config():
         "--clf_image_emb_path",
         metavar="DIR",
         default="./Ladder/out/Waterbirds/resnet_sup_in1k_attrNo/Waterbirds_ERM_hparams0_seed0/clip_img_encoder_ViT-B/32/test_classifier_embeddings.npy",
-        help="Path to NumPy file containing classifier image embeddings.",
+        help="Fallback path to NumPy file containing image embeddings.",
+    )
+    parser.add_argument(
+        "--image_emb_path",
+        metavar="DIR",
+        default="",
+        help="Explicit image embedding path template (preferred for llava_mammo backend).",
     )
 
     parser.add_argument(
@@ -168,6 +173,42 @@ def config():
             "'mode': append only the single modal BI-RADS level observed in the "
             "passed slice for that hypothesis, producing one variant per hypothesis."
         ),
+    )
+    parser.add_argument(
+        "--backend",
+        default="legacy",
+        choices=["legacy", "llava_mammo"],
+        help="Embedding backend. legacy uses CLIP+aligner; llava_mammo uses Llava embeddings directly.",
+    )
+    parser.add_argument(
+        "--llava_model_path",
+        default="",
+        type=str,
+        help="Local path to unpacked Llava-Mammo model or adapter directory (required for llava_mammo backend).",
+    )
+    parser.add_argument(
+        "--llava_base_model_id",
+        default="llava-hf/llava-v1.6-vicuna-7b-hf",
+        type=str,
+        help="Base Llava model ID used when llava_model_path points to an adapter-only checkpoint.",
+    )
+    parser.add_argument(
+        "--llava_processor_id",
+        default="llava-hf/llava-v1.6-vicuna-7b-hf",
+        type=str,
+        help="Processor ID for Llava input preprocessing.",
+    )
+    parser.add_argument(
+        "--llava_text_batch_size",
+        default=32,
+        type=int,
+        help="Micro-batch size for Llava text embedding extraction.",
+    )
+    parser.add_argument(
+        "--llava_text_max_length",
+        default=256,
+        type=int,
+        help="Max token length for Llava text embedding extraction.",
     )
     parser.add_argument("--seed", default="0", type=int, help="Random seed for reproducibility.")
     return parser.parse_args()
@@ -469,49 +510,29 @@ def get_hypothesis_from_LLM(LLM, key, prompt, hypothesis_dict_file, prompt_dict_
     return hypothesis_dict, prompt_dict
 
 
-def get_prompt_embedding(hyp_sent_list, clip_model, dataset_type="medical"):
+def get_prompt_embedding(hyp_sent_list, embedding_backend, dataset_type="medical"):
     """
     Converts a list of hypothesis sentences into CLIP text embeddings.
 
     Args:
         hyp_sent_list (list of str): List of hypothesis prompts.
-        clip_model (dict): CLIP model and tokenizer dictionary.
+        embedding_backend: Embedding backend object.
         dataset_type (str): Either "medical" or "vision"; determines tokenizer and projection usage.
 
     Returns:
         torch.Tensor or np.ndarray: Normalized embeddings for the input hypotheses.
     """
-    if dataset_type == "medical":
-        attr_embs = []
-        with torch.no_grad():
-            for prompt in hyp_sent_list:
-                text_token = clip_model["tokenizer"](
-                    prompt, padding="longest", truncation=True, return_tensors="pt", max_length=256
-                )
-                text_emb = clip_model["model"].encode_text(text_token.to("cuda"))
-                text_emb = (
-                    clip_model["model"].text_projection(text_emb)
-                    if clip_model["model"].projection
-                    else text_emb
-                )
-                text_emb = text_emb.mean(dim=0, keepdim=True)
-                text_emb /= text_emb.norm(dim=-1, keepdim=True)
-                attr_embs.append(text_emb)
-
-        attr_embs = torch.stack(attr_embs).squeeze().detach()
-        return attr_embs
-    else:
-        with torch.no_grad():
-            attr_embs = []
-            for prompt in hyp_sent_list:
-                text_token = clip.tokenize(prompt).to("cuda")
-                text_emb = clip_model["model"].encode_text(text_token.to("cuda"))
-                text_emb = text_emb.mean(dim=0, keepdim=True)
-                text_emb /= text_emb.norm(dim=-1, keepdim=True)
-                attr_embs.append(text_emb)
-
-            attr_embs = torch.stack(attr_embs).squeeze().detach().cpu().numpy()
-            return attr_embs
+    attr_embs = []
+    for prompt in hyp_sent_list:
+        if isinstance(prompt, list):
+            prompt_texts = prompt
+        else:
+            prompt_texts = [prompt]
+        text_emb = embedding_backend.encode_texts(prompt_texts, dataset_type=dataset_type)
+        text_emb = text_emb.mean(dim=0, keepdim=True)
+        text_emb = text_emb / torch.norm(text_emb, dim=1, keepdim=True)
+        attr_embs.append(text_emb)
+    return torch.cat(attr_embs, dim=0)
 
 
 def _extract_birads_numeric(series):
@@ -761,8 +782,8 @@ def discover_slices(
     df,
     pred_col,
     prompt_dict,
-    clip_model,
-    clf_image_emb_path,
+    embedding_backend,
+    image_emb_path,
     aligner_path,
     save_path,
     save_file,
@@ -774,6 +795,7 @@ def discover_slices(
     birads_prompt_dict=None,
     birads_formats=("category",),
     birads_expansion_mode="all",
+    backend="legacy",
 ):
     """
     Discovers data slices aligned with specific hypotheses by comparing aligned image and prompt embeddings.
@@ -786,8 +808,8 @@ def discover_slices(
         df (pd.DataFrame): Input data with predictions and ground truth.
         pred_col (str): Column name for predictions.
         prompt_dict (dict): Dictionary mapping hypothesis names to prompts.
-        clip_model (dict): Loaded CLIP model and tokenizer.
-        clf_image_emb_path (str): Path to classifier embeddings (.npy).
+        embedding_backend: Loaded embedding backend.
+        image_emb_path (str): Path to image embeddings (.npy).
         aligner_path (str): Path to the learned linear aligner (.pth).
         save_path (Path): Directory to save the output CSV.
         save_file (str): Output filename.
@@ -818,23 +840,29 @@ def discover_slices(
         hyp_list.append(key)
         hyp_sent_list.append(value)
 
-    attr_embs = get_prompt_embedding(hyp_sent_list, clip_model, dataset_type=dataset_type)
-    attr_embs = torch.tensor(attr_embs)
+    attr_embs = get_prompt_embedding(hyp_sent_list, embedding_backend, dataset_type=dataset_type).float()
+    if attr_embs.ndim == 1:
+        attr_embs = attr_embs.unsqueeze(0)
     print(f"attr_embs: {attr_embs.size()}")
 
     print(df.shape)
     df_indx = df.index.tolist()
-    img_emb_clf = np.load(clf_image_emb_path)
-    print(img_emb_clf.shape)
-    img_emb_clf = img_emb_clf[df_indx]
+    img_emb = np.load(image_emb_path)
+    print(img_emb.shape)
+    img_emb = img_emb[df_indx]
 
-    aligner = torch.load(aligner_path)
-    W = aligner["W"]
-    b = aligner["b"]
+    img_emb_tensor = torch.from_numpy(img_emb).float()
+    if backend == "legacy":
+        aligner = torch.load(aligner_path)
+        W = aligner["W"]
+        b = aligner["b"]
+        img_emb_clip_tensor = img_emb_tensor @ W.T + b
+    else:
+        print("Skipping aligner projection because backend=llava_mammo.")
+        img_emb_clip_tensor = img_emb_tensor
 
-    img_emb_clf_tensor = torch.from_numpy(img_emb_clf)
-    img_emb_clip_tensor = img_emb_clf_tensor @ W.T + b
-    sim_score = torch.matmul(img_emb_clip_tensor.to("cuda").float(), attr_embs.to("cuda").float().T)
+    sim_device = attr_embs.device
+    sim_score = torch.matmul(img_emb_clip_tensor.to(sim_device).float(), attr_embs.to(sim_device).float().T)
     print(f"img_emb_clip_tensor: {img_emb_clip_tensor.size()}")
     print(f"sim_score size: {sim_score.size()}")
 
@@ -945,12 +973,11 @@ def discover_slices(
             birads_hyp_list = list(effective_birads_dict.keys())
             birads_sent_list = list(effective_birads_dict.values())
             birads_attr_embs = get_prompt_embedding(
-                birads_sent_list, clip_model, dataset_type=dataset_type
+                birads_sent_list, embedding_backend, dataset_type=dataset_type
             )
-            birads_attr_embs = torch.tensor(birads_attr_embs)
             birads_sim_score = torch.matmul(
-                img_emb_clip_tensor.to("cuda").float(),
-                birads_attr_embs.to("cuda").float().T,
+                img_emb_clip_tensor.to(sim_device).float(),
+                birads_attr_embs.to(sim_device).float().T,
             )
             for bidx, birads_hyp in enumerate(birads_hyp_list):
                 df[birads_hyp] = birads_sim_score[:, bidx].cpu().numpy()
@@ -1083,10 +1110,10 @@ def validate_error_slices_via_LLM(
     key,
     save_path,
     clf_results_csv,
-    clf_image_emb_path,
+    image_emb_path,
     aligner_path,
     prompt,
-    clip_model,
+    embedding_backend,
     prediction_col,
     dataset_type="medical",
     mode="valid",
@@ -1097,6 +1124,7 @@ def validate_error_slices_via_LLM(
     append_birads_to_passed_hypothesis=False,
     birads_formats=("category",),
     birads_expansion_mode="all",
+    backend="legacy",
 ):
     """
     Validates automatically discovered error slices by using a prompt-based LLM to generate hypotheses.
@@ -1106,10 +1134,10 @@ def validate_error_slices_via_LLM(
         key (str): API key for the LLM.
         save_path (Path): Path to save generated outputs and logs.
         clf_results_csv (str): Path to the classifier result CSV.
-        clf_image_emb_path (str): Path to classifier embeddings.
+        image_emb_path (str): Path to image embeddings.
         aligner_path (str): Path to the saved aligner weights.
         prompt (str): Prompt text to send to the LLM.
-        clip_model (dict): The CLIP model/tokenizer.
+        embedding_backend: The embedding backend object.
         prediction_col (str): Column name for predicted probabilities or labels.
         dataset_type (str): "medical" or "vision".
         mode (str): Dataset split ("train", "valid", or "test").
@@ -1192,8 +1220,8 @@ def validate_error_slices_via_LLM(
         df,
         pred_col,
         prompt_dict,
-        clip_model,
-        clf_image_emb_path,
+        embedding_backend,
+        image_emb_path,
         aligner_path,
         save_path,
         save_file=f"{mode}_{class_label}_dataframe_mitigation.csv",
@@ -1205,6 +1233,7 @@ def validate_error_slices_via_LLM(
         birads_prompt_dict=existing_birads_prompt_dict,
         birads_formats=birads_formats,
         birads_expansion_mode=birads_expansion_mode,
+        backend=backend,
     )
     if (
         append_birads_to_passed_hypothesis
@@ -1226,10 +1255,10 @@ def validate_error_slices_via_sent(
     dataset,
     save_path,
     clf_results_csv,
-    clf_image_emb_path,
+    image_emb_path,
     aligner_path,
     top50_err_text,
-    clip_model,
+    embedding_backend,
     class_label,
     prediction_col,
     mode="test",
@@ -1238,6 +1267,7 @@ def validate_error_slices_via_sent(
     append_birads_to_passed_hypothesis=False,
     birads_formats=("category",),
     birads_expansion_mode="all",
+    backend="legacy",
 ):
     """
     Wrapper function that reads top-50 failure text, constructs dataset-specific prompt,
@@ -1249,10 +1279,10 @@ def validate_error_slices_via_sent(
         dataset (str): Name of the dataset ("nih", "rsna", "celeba", etc.).
         save_path (Path): Directory where outputs are saved.
         clf_results_csv (str): Path to classifier results CSV.
-        clf_image_emb_path (str): Path to classifier embeddings.
+        image_emb_path (str): Path to image embeddings.
         aligner_path (str): Path to linear aligner weights.
         top50_err_text (str): Text file with top-50 error samples.
-        clip_model (dict): Loaded CLIP model.
+        embedding_backend: Loaded embedding backend.
         class_label (str): Class label to analyze.
         prediction_col (str): Name of prediction column.
         mode (str): Dataset split (e.g., "train", "valid", "test").
@@ -1271,10 +1301,10 @@ def validate_error_slices_via_sent(
             key,
             save_path,
             clf_results_csv,
-            clf_image_emb_path,
+            image_emb_path,
             aligner_path,
             prompt,
-            clip_model,
+            embedding_backend,
             prediction_col,
             dataset_type="medical",
             mode=mode,
@@ -1285,6 +1315,7 @@ def validate_error_slices_via_sent(
             append_birads_to_passed_hypothesis=append_birads_to_passed_hypothesis,
             birads_formats=birads_formats,
             birads_expansion_mode=birads_expansion_mode,
+            backend=backend,
         )
     elif is_mammo_dataset(dataset):
         prompt = create_RSNA_prompts(content)
@@ -1293,10 +1324,10 @@ def validate_error_slices_via_sent(
             key,
             save_path,
             clf_results_csv,
-            clf_image_emb_path,
+            image_emb_path,
             aligner_path,
             prompt,
-            clip_model,
+            embedding_backend,
             prediction_col,
             dataset_type="medical",
             mode=mode,
@@ -1306,6 +1337,7 @@ def validate_error_slices_via_sent(
             append_birads_to_passed_hypothesis=append_birads_to_passed_hypothesis,
             birads_formats=birads_formats,
             birads_expansion_mode=birads_expansion_mode,
+            backend=backend,
         )
     elif dataset.lower() == "celeba":
         prompt = create_CELEBA_prompts(content)
@@ -1314,10 +1346,10 @@ def validate_error_slices_via_sent(
             key,
             save_path,
             clf_results_csv,
-            clf_image_emb_path,
+            image_emb_path,
             aligner_path,
             prompt,
-            clip_model,
+            embedding_backend,
             prediction_col,
             dataset_type="vision",
             mode=mode,
@@ -1327,6 +1359,7 @@ def validate_error_slices_via_sent(
             append_birads_to_passed_hypothesis=append_birads_to_passed_hypothesis,
             birads_formats=birads_formats,
             birads_expansion_mode=birads_expansion_mode,
+            backend=backend,
         )
     elif dataset.lower() == "waterbirds":
         prompt = create_Waterbirds_prompts(content)
@@ -1335,10 +1368,10 @@ def validate_error_slices_via_sent(
             key,
             save_path,
             clf_results_csv,
-            clf_image_emb_path,
+            image_emb_path,
             aligner_path,
             prompt,
-            clip_model,
+            embedding_backend,
             prediction_col,
             dataset_type="vision",
             mode=mode,
@@ -1348,6 +1381,7 @@ def validate_error_slices_via_sent(
             append_birads_to_passed_hypothesis=append_birads_to_passed_hypothesis,
             birads_formats=birads_formats,
             birads_expansion_mode=birads_expansion_mode,
+            backend=backend,
         )
     elif dataset.lower() == "metashift":
         cat_prompt, dog_prompt = create_Metashift_prompts(content)
@@ -1362,10 +1396,10 @@ def validate_error_slices_via_sent(
             key,
             save_path,
             clf_results_csv,
-            clf_image_emb_path,
+            image_emb_path,
             aligner_path,
             prompt,
-            clip_model,
+            embedding_backend,
             prediction_col,
             dataset_type="vision",
             mode=mode,
@@ -1375,13 +1409,21 @@ def validate_error_slices_via_sent(
             append_birads_to_passed_hypothesis=append_birads_to_passed_hypothesis,
             birads_formats=birads_formats,
             birads_expansion_mode=birads_expansion_mode,
+            backend=backend,
         )
 
 
 def main(args):
     seed_all(args.seed)
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
-    args.aligner_path = args.aligner_path.format(args.seed)
+    if args.backend == "llava_mammo" and not is_mammo_dataset(args.dataset):
+        raise ValueError(
+            "llava_mammo backend in validate_error_slices_w_LLM.py is supported only for mammography datasets."
+        )
+    if args.backend == "legacy" and not args.aligner_path:
+        raise ValueError("--aligner_path is required when --backend legacy is selected.")
+
+    args.aligner_path = args.aligner_path.format(args.seed) if args.aligner_path else ""
     args.top50_err_text = args.top50_err_text.format(args.seed)
     args.save_path = Path(args.save_path.format(args.seed))
     if Path(args.save_path).exists():
@@ -1398,9 +1440,10 @@ def main(args):
     out_file = args.save_path / f"ladder_validate_slices_w_LLM-{args.class_label}.txt"
 
     print("\n")
+    print(f"Embedding backend: {args.backend}")
     print(args.save_path)
 
-    clip_model = create_clip(args)
+    embedding_backend = create_embedding_backend(args)
     azure_params = {
         "azure_api_version": args.azure_api_version,
         "azure_endpoint": args.azure_endpoint,
@@ -1409,7 +1452,11 @@ def main(args):
     print("####################" * 10)
     if args.prediction_col == "out_put_predict":
         clf_results_csv = args.clf_results_csv.format(args.seed, "train")
-        clf_image_emb_path = args.clf_image_emb_path.format(args.seed, "train")
+        image_emb_path = (
+            args.image_emb_path.format(args.seed, "train")
+            if args.image_emb_path
+            else args.clf_image_emb_path.format(args.seed, "train")
+        )
         print("\n")
         print(args.save_path)
         print("####################" * 10)
@@ -1422,10 +1469,10 @@ def main(args):
             args.dataset,
             args.save_path,
             clf_results_csv,
-            clf_image_emb_path,
+            image_emb_path,
             args.aligner_path,
             args.top50_err_text,
-            clip_model,
+            embedding_backend,
             args.class_label,
             args.prediction_col,
             mode="train",
@@ -1433,10 +1480,15 @@ def main(args):
             append_birads_to_passed_hypothesis=args.append_birads_to_passed_hypothesis,
             birads_formats=args.birads_formats,
             birads_expansion_mode=args.birads_expansion_mode,
+            backend=args.backend,
         )
 
         clf_results_csv = args.clf_results_csv.format(args.seed, "valid")
-        clf_image_emb_path = args.clf_image_emb_path.format(args.seed, "valid")
+        image_emb_path = (
+            args.image_emb_path.format(args.seed, "valid")
+            if args.image_emb_path
+            else args.clf_image_emb_path.format(args.seed, "valid")
+        )
         print("####################" * 10)
         print(
             "=======================================>>>>> Mode: Valid <<<<<======================================="
@@ -1447,10 +1499,10 @@ def main(args):
             args.dataset,
             args.save_path,
             clf_results_csv,
-            clf_image_emb_path,
+            image_emb_path,
             args.aligner_path,
             args.top50_err_text,
-            clip_model,
+            embedding_backend,
             args.class_label,
             args.prediction_col,
             mode="valid",
@@ -1458,10 +1510,15 @@ def main(args):
             append_birads_to_passed_hypothesis=args.append_birads_to_passed_hypothesis,
             birads_formats=args.birads_formats,
             birads_expansion_mode=args.birads_expansion_mode,
+            backend=args.backend,
         )
 
         clf_results_csv = args.clf_results_csv.format(args.seed, "test")
-        clf_image_emb_path = args.clf_image_emb_path.format(args.seed, "test")
+        image_emb_path = (
+            args.image_emb_path.format(args.seed, "test")
+            if args.image_emb_path
+            else args.clf_image_emb_path.format(args.seed, "test")
+        )
         print("\n")
         print(args.save_path)
         print("####################" * 10)
@@ -1474,10 +1531,10 @@ def main(args):
             args.dataset,
             args.save_path,
             clf_results_csv,
-            clf_image_emb_path,
+            image_emb_path,
             args.aligner_path,
             args.top50_err_text,
-            clip_model,
+            embedding_backend,
             args.class_label,
             args.prediction_col,
             mode="test",
@@ -1486,11 +1543,16 @@ def main(args):
             append_birads_to_passed_hypothesis=args.append_birads_to_passed_hypothesis,
             birads_formats=args.birads_formats,
             birads_expansion_mode=args.birads_expansion_mode,
+            backend=args.backend,
         )
 
     else:
         clf_results_csv = args.clf_results_csv.format(args.seed, "test")
-        clf_image_emb_path = args.clf_image_emb_path.format(args.seed, "test")
+        image_emb_path = (
+            args.image_emb_path.format(args.seed, "test")
+            if args.image_emb_path
+            else args.clf_image_emb_path.format(args.seed, "test")
+        )
         print("\n")
         print(args.save_path)
         print("####################" * 10)
@@ -1503,10 +1565,10 @@ def main(args):
             args.dataset,
             args.save_path,
             clf_results_csv,
-            clf_image_emb_path,
+            image_emb_path,
             args.aligner_path,
             args.top50_err_text,
-            clip_model,
+            embedding_backend,
             args.class_label,
             args.prediction_col,
             mode="test",
@@ -1515,6 +1577,7 @@ def main(args):
             append_birads_to_passed_hypothesis=args.append_birads_to_passed_hypothesis,
             birads_formats=args.birads_formats,
             birads_expansion_mode=args.birads_expansion_mode,
+            backend=args.backend,
         )
 
     print("Completed")

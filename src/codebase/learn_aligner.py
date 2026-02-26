@@ -319,21 +319,32 @@ def config():
     parser.add_argument("--seed", default=0, type=int, help="which seed?")
     parser.add_argument("--epochs", default=50, type=int, help="Epochs to train?")
     parser.add_argument("--lr", default=0.01, type=float, help="Epochs to train?")
+    parser.add_argument(
+        "--backend",
+        default="legacy",
+        choices=["legacy", "llava_mammo"],
+        help="Embedding backend. llava_mammo does not require aligner training.",
+    )
     return parser.parse_args()
 
 
 def main(args):
     seed_all(args.seed)
+    save_path = Path(args.save_path.format(args.seed))
+    if args.backend == "llava_mammo":
+        save_path.mkdir(parents=True, exist_ok=True)
+        print("Skipping aligner training because backend=llava_mammo (no alignment step required).")
+        return
 
     reps_clf_train, reps_clip_train, reps_clf_test, reps_clip_test, save_path = init_path(
         args.seed, args.clf_reps_path, args.clip_reps_path, args.save_path, args.dataset
     )
-    if Path(args.save_path).exists():
+    if save_path.exists():
         for pattern in [
             "aligner_out.txt",
             "aligner_*.pth"
         ]:
-            for old_file in args.save_path.glob(pattern):
+            for old_file in save_path.glob(pattern):
                 old_file.unlink()
                 print(f"Deleted old save: {old_file}")
                 

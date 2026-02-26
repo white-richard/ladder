@@ -311,6 +311,22 @@ We provide runnable shell scripts to replicate the full LADDER pipeline across a
  - [RSNA-Mammo](./src/scripts/waterbirds/resnet_sup_in1k.sh)
  - [VinDr-Mammo](./src/scripts/waterbirds/resnet_sup_in1k.sh)
 
+### Backend smoke tests (ViNDr)
+
+Legacy backend (default, CLIP + aligner):
+
+```bash
+bash ./src/scripts/Vindr/efficient_net_b5.sh --backend legacy
+```
+
+Llava-Mammo backend (no aligner step):
+
+```bash
+bash ./src/scripts/Vindr/efficient_net_b5.sh \
+  --backend llava_mammo \
+  --llava-model-path /path/to/unpacked/llava/checkpoint
+```
+
 ## 📖 Citation
 If you find this work useful, please cite our paper:
 ```bibtex
